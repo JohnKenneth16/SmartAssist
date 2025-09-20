@@ -12,7 +12,7 @@ export default function Signup() {
     try {
       await signUp(email, password); // ✅ this calls Firebase
       Alert.alert("Success", "Account created!");
-      router.replace("/home");       // go to home after signup
+      router.replace("/home.jsx");       // go to home after signup
     } catch (error) {
       console.log("Signup error:", error.code, error.message);
       Alert.alert("Error", error.message);
