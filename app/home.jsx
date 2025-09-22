@@ -9,19 +9,24 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // ✅
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { db } from "../firebaseConfig";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function Home() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const [history, setHistory] = useState([]); // ✅ history state
+  const [history, setHistory] = useState([]);
   const router = useRouter();
 
-  // Example offline dataset
   const offlineData = {
     photosynthesis:
       "Photosynthesis is the process by which plants use sunlight to produce food.",
+    gravity: "Gravity is the force that pulls objects toward the center of the Earth.",
+    computer: "A computer is a machine that processes information and performs tasks.",
+    javascript:
+      "JavaScript is a high-level programming language for web interactivity.",
        gravity: "Gravity is the force that pulls objects toward the center of the Earth.",
     computer: "A computer is a machine that processes information and performs tasks.",
     computer: "A computer is a machine that processes information and performs tasks.",
@@ -1215,195 +1220,453 @@ ambarella: "Ambarella is a tropical fruit with golden skin and crunchy flesh. It
 jambul: "Jambul, or Java plum, is a purple fruit with a sweet-tart flavor. It is rich in iron and antioxidants. Jambul is used in juices and jams.",
 melon: "Melons are sweet, juicy fruits that come in many varieties. They are hydrating and full of vitamins. Melons are refreshing in hot weather.",
 cantaloupe: "Cantaloupes are orange-fleshed melons with a sweet taste. They are rich in vitamin A and hydration. Cantaloupes are often eaten fresh or in salads.",
+Inception: "Inception (2010) - A sci-fi thriller by Christopher Nolan about dream infiltration.",
+  Titanic: "Titanic (1997) - A romance and disaster epic directed by James Cameron.",
+  Avatar: "Avatar (2009) - A sci-fi set on Pandora exploring humans vs Na'vi conflicts.",
+  Interstellar: "Interstellar (2014) - Nolan's space odyssey about saving humanity.",
+  TheGodfather: "The Godfather (1972) - Crime epic about the Corleone mafia family.",
+  TheDarkKnight: "The Dark Knight (2008) - Batman faces the Joker in Nolan’s acclaimed superhero film.",
+  ForrestGump: "Forrest Gump (1994) - A heartwarming story of a simple man witnessing key events in history.",
+  TheMatrix: "The Matrix (1999) - Sci-fi action film about humans trapped in a simulated reality.",
+  Gladiator: "Gladiator (2000) - A Roman general seeks revenge after betrayal.",
+  ShawshankRedemption: "The Shawshank Redemption (1994) - Story of hope and friendship inside prison.",
+  PulpFiction: "Pulp Fiction (1994) - Quentin Tarantino’s cult classic intertwining crime stories.",
+  SchindlersList: "Schindler’s List (1993) - True story of a man saving Jews during the Holocaust.",
+  TheLionKing: "The Lion King (1994) - Disney’s animated epic about Simba’s journey to be king.",
+  AvengersEndgame: "Avengers: Endgame (2019) - Marvel heroes unite to defeat Thanos.",
+  BlackPanther: "Black Panther (2018) - A Marvel film celebrating African culture and heroism.",
+  StarWarsANewHope: "Star Wars: A New Hope (1977) - The saga begins with Luke Skywalker fighting the Empire.",
+  EmpireStrikesBack: "The Empire Strikes Back (1980) - Dark sequel with the famous ‘I am your father’ reveal.",
+  ReturnOfTheJedi: "Return of the Jedi (1983) - Rebels fight to end the Empire’s tyranny.",
+  JurassicPark: "Jurassic Park (1993) - Dinosaurs brought back to life cause chaos on an island.",
+  TheAvengers: "The Avengers (2012) - Earth’s mightiest heroes team up for the first time.",
+  IronMan: "Iron Man (2008) - Tony Stark becomes the armored Avenger, launching the MCU.",
+  CaptainAmericaWinterSoldier: "Captain America: The Winter Soldier (2014) - Steve Rogers uncovers Hydra within SHIELD.",
+  DoctorStrange: "Doctor Strange (2016) - A surgeon learns the mystic arts to protect reality.",
+  SpiderManNoWayHome: "Spider-Man: No Way Home (2021) - Multiverse chaos with three Spider-Men.",
+  GuardiansOfTheGalaxy: "Guardians of the Galaxy (2014) - A misfit group saves the galaxy with humor and music.",
+  ThorRagnarok: "Thor: Ragnarok (2017) - Thor faces Hela while teaming with Hulk on Sakaar.",
+  WonderWoman: "Wonder Woman (2017) - Diana, an Amazon warrior, joins WWI to fight Ares.",
+  ManOfSteel: "Man of Steel (2013) - Superman’s modern origin story directed by Zack Snyder.",
+  JusticeLeagueSnyderCut: "Zack Snyder’s Justice League (2021) - The epic 4-hour cut of DC heroes uniting.",
+  Joker: "Joker (2019) - Dark origin story of Arthur Fleck’s transformation into the Joker.",
+  TheBatman: "The Batman (2022) - Robert Pattinson’s gritty detective version of Batman.",
+  Frozen: "Frozen (2013) - Disney’s hit about Elsa, Anna, and the song ‘Let It Go’.",
+  Moana: "Moana (2016) - A girl sails across the ocean to restore the heart of Te Fiti.",
+  Coco: "Coco (2017) - Pixar’s celebration of Mexican Day of the Dead and family.",
+  InsideOut: "Inside Out (2015) - Pixar’s story about emotions inside a young girl’s mind.",
+  ToyStory: "Toy Story (1995) - Pixar’s first full CGI movie about toys coming to life.",
+  FindingNemo: "Finding Nemo (2003) - A clownfish father searches the ocean for his lost son.",
+  Up: "Up (2009) - An old man flies his house with balloons on a grand adventure.",
+  Ratatouille: "Ratatouille (2007) - A rat dreams of being a chef in Paris.",
+  Brave: "Brave (2012) - A Scottish princess defies tradition to change her fate.",
+  Aladdin: "Aladdin (1992) - Disney’s tale of a street rat who finds a magic lamp.",
+  BeautyAndTheBeast: "Beauty and the Beast (1991) - Disney’s story of love beyond appearances.",
+  Mulan: "Mulan (1998) - A young woman disguises herself as a man to fight for China.",
+  Hercules: "Hercules (1997) - Disney’s take on the Greek hero becoming a true hero.",
+  Tangled: "Tangled (2010) - Rapunzel leaves her tower for adventure with Flynn Rider.",
+  Zootopia: "Zootopia (2016) - A bunny cop and fox solve a conspiracy in the city of animals.",
+  Encanto: "Encanto (2021) - Disney’s story of the magical Madrigal family in Colombia.",
+  Luca: "Luca (2021) - A coming-of-age Pixar film about sea monsters and friendship.",
+  Soul: "Soul (2020) - Pixar’s exploration of life, death, and purpose through music.",
+  TurningRed: "Turning Red (2022) - Pixar’s story about a girl turning into a red panda.",
+  TheLordOfTheRingsFellowship: "The Lord of the Rings: The Fellowship of the Ring (2001) - Directed by Peter Jackson, this epic fantasy introduces Frodo Baggins and the quest to destroy the One Ring.\n\nThe film showcases breathtaking New Zealand landscapes, deep friendships, and the corrupting influence of power.\n\nIt became a landmark in modern cinema, launching one of the most successful trilogies ever made.",
+
+HarryPotterSorcerersStone: "Harry Potter and the Sorcerer’s Stone (2001) - The beginning of the Harry Potter saga where young Harry discovers he is a wizard.\n\nIt introduces Hogwarts, iconic characters like Hermione and Ron, and the first battle against Voldemort’s dark influence.\n\nThe film sparked a global phenomenon, turning J.K. Rowling’s books into one of the biggest franchises in movie history.",
+TheLordOfTheRingsFellowship: "The Lord of the Rings: The Fellowship of the Ring (2001) - Directed by Peter Jackson, this epic fantasy introduces Frodo Baggins and the quest to destroy the One Ring.\n\nThe film showcases breathtaking New Zealand landscapes, deep friendships, and the corrupting influence of power.\n\nIt became a landmark in modern cinema, launching one of the most successful trilogies ever made.",
+
+TheLordOfTheRingsTwoTowers: "The Lord of the Rings: The Two Towers (2002) continues Frodo’s journey while introducing Gollum as a key character.\n\nThe film is notable for its large-scale battles, especially Helm’s Deep, which set a new standard for fantasy warfare.\n\nIt deepened the mythology of Middle-earth and raised the stakes for the final chapter.",
+
+TheLordOfTheRingsReturnKing: "The Lord of the Rings: The Return of the King (2003) concluded the trilogy with epic battles and emotional farewells.\n\nIt won 11 Academy Awards, tying the record for most Oscars in history.\n\nThe movie remains a cultural milestone, celebrated for its storytelling and visual achievements.",
+
+HarryPotterSorcerersStone: "Harry Potter and the Sorcerer’s Stone (2001) begins the magical saga of the boy who lived.\n\nIt introduces audiences to Hogwarts, Diagon Alley, and iconic friendships that shaped a generation.\n\nThe film’s success launched one of the most beloved franchises in cinema.",
+
+HarryPotterChamberSecrets: "Harry Potter and the Chamber of Secrets (2002) delves deeper into Hogwarts mysteries.\n\nThe story brings new magical creatures, darker themes, and the introduction of Dobby the house-elf.\n\nIt cemented the series as more than a children’s fantasy, expanding its worldwide following.",
+
+HarryPotterPrisonerAzkaban: "Harry Potter and the Prisoner of Azkaban (2004) shifts tone with Alfonso Cuarón’s darker direction.\n\nThe movie introduces Sirius Black and the time-turner, adding complexity to the story.\n\nMany fans consider it one of the strongest entries for its emotional depth and visual style.",
+
+HarryPotterGobletFire: "Harry Potter and the Goblet of Fire (2005) shows Harry entering a dangerous tournament.\n\nThe Triwizard challenges bring high tension, and the return of Voldemort raises the stakes.\n\nThe ending shocked fans, signaling the series’ turn into darker territory.",
+
+HarryPotterOrderPhoenix: "Harry Potter and the Order of the Phoenix (2007) follows Harry battling skepticism as Voldemort’s rise spreads fear.\n\nIt introduces Dolores Umbridge and the secret Dumbledore’s Army.\n\nThe emotional battle at the Ministry of Magic left a lasting impact on fans.",
+
+HarryPotterHalfBloodPrince: "Harry Potter and the Half-Blood Prince (2009) explores Voldemort’s past and the mystery of Horcruxes.\n\nThe tragic death of Dumbledore marked a pivotal moment in the saga.\n\nThe darker tone prepared audiences for the final two films.",
+
+HarryPotterDeathlyHallows1: "Harry Potter and the Deathly Hallows Part 1 (2010) sees Harry, Hermione, and Ron on the run.\n\nThe film emphasizes their bond while exploring themes of sacrifice and survival.\n\nIt builds suspense for the climactic final battle.",
+
+HarryPotterDeathlyHallows2: "Harry Potter and the Deathly Hallows Part 2 (2011) delivers the epic conclusion at Hogwarts.\n\nThe final showdown between Harry and Voldemort became legendary.\n\nIt broke box office records and closed the saga on an emotional high.",
+
+TheHobbitUnexpectedJourney: "The Hobbit: An Unexpected Journey (2012) returns to Middle-earth before LOTR.\n\nBilbo joins Gandalf and dwarves on a quest to reclaim Erebor.\n\nThough divisive, it rekindled Tolkien’s world for a new generation.",
+
+TheHobbitDesolationSmaug: "The Hobbit: The Desolation of Smaug (2013) features Bilbo’s famous encounter with the dragon Smaug.\n\nThe visuals and Benedict Cumberbatch’s voice work brought the dragon to life.\n\nIt set up the climactic battles of the trilogy’s end.",
+
+TheHobbitBattleFiveArmies: "The Hobbit: The Battle of the Five Armies (2014) concludes Bilbo’s journey.\n\nIt delivers grand-scale battles between men, elves, dwarves, and orcs.\n\nThe movie ties directly into the Lord of the Rings saga.",
+
+Frozen2: "Frozen II (2019) expands Elsa and Anna’s story beyond Arendelle.\n\nIt explores themes of identity, history, and confronting the past.\n\nThe sequel was praised for its songs and stunning animation.",
+
+TheIncredibles: "The Incredibles (2004) follows a family of superheroes hiding from society.\n\nIt blends action, humor, and family drama seamlessly.\n\nThe film became a Pixar classic, beloved across all ages.",
+
+TheIncredibles2: "The Incredibles 2 (2018) continues the family’s story with Elastigirl in the spotlight.\n\nIt updates the superhero theme for modern times while focusing on family dynamics.\n\nFans waited 14 years, and the movie delivered both action and heart.",
+
+Shrek: "Shrek (2001) parodies fairy tales while telling the story of an ogre’s unlikely love.\n\nThe humor, heart, and soundtrack made it an instant classic.\n\nIt changed the landscape of animated films with its irreverent style.",
+
+Shrek2: "Shrek 2 (2004) continues Shrek and Fiona’s story, introducing Puss in Boots.\n\nThe film was praised for its humor, animation, and catchy soundtrack.\n\nIt became one of the most successful animated sequels ever made.",
+
+ShrekForeverAfter: "Shrek Forever After (2010) closes the series with Shrek wishing for a different life.\n\nThe film explores themes of family, regret, and appreciating what you have.\n\nThough not as acclaimed as earlier entries, it gave closure to fans.",
+
+KungFuPanda: "Kung Fu Panda (2008) introduces Po, an unlikely kung fu hero.\n\nIt blends action, comedy, and heartfelt lessons about self-belief.\n\nThe film’s visuals and humor made it a standout DreamWorks hit.",
+
+KungFuPanda2: "Kung Fu Panda 2 (2011) explores Po’s origins while raising the stakes.\n\nIt features emotional storytelling alongside breathtaking action sequences.\n\nFans and critics praised it as a strong sequel.",
+
+KungFuPanda3: "Kung Fu Panda 3 (2016) sees Po meeting his biological father.\n\nThe story expands the panda lore while delivering humor and heart.\n\nIt completed the trilogy with a satisfying conclusion.",
+
+Madagascar: "Madagascar (2005) follows zoo animals stranded in the wild.\n\nIts humor and quirky characters made it a family favorite.\n\nThe film spawned several sequels and spin-offs.",
+
+MadagascarEscape2Africa: "Madagascar: Escape 2 Africa (2008) continues the animals’ journey.\n\nThey meet Alex’s family while adjusting to life in the wild.\n\nThe film expanded the world and character depth.",
+
+MadagascarEuropeMostWanted: "Madagascar 3: Europe’s Most Wanted (2012) takes the animals on a circus adventure.\n\nIts colorful visuals and music made it a hit with families.\n\nIt closed the trilogy with energy and fun.",
+
+DespicableMe: "Despicable Me (2010) introduces Gru, a villain with a soft heart.\n\nThe Minions became a cultural phenomenon.\n\nIts blend of humor and heart made it a global success.",
+
+DespicableMe2: "Despicable Me 2 (2013) continues Gru’s story as he faces new villains.\n\nThe film’s humor and family themes kept audiences entertained.\n\nIt reinforced the Minions’ popularity worldwide.",
+
+DespicableMe3: "Despicable Me 3 (2017) shows Gru discovering his twin brother.\n\nThe film mixes action, comedy, and family drama.\n\nThough divisive, it extended the franchise’s success.",
+
+Minions: "Minions (2015) explores the origins of Gru’s yellow helpers.\n\nTheir slapstick humor drove the film’s popularity.\n\nIt became a massive box office success despite mixed reviews.",
+
+Sing: "Sing (2016) follows animals competing in a singing competition.\n\nIt combines humor, music, and heartfelt character arcs.\n\nThe film’s soundtrack and animation earned praise.",
+
+Sing2: "Sing 2 (2021) continues the story with bigger dreams and stages.\n\nThe sequel adds new characters and musical numbers.\n\nFans enjoyed its colorful visuals and emotional beats.",
+
+BigHero6: "Big Hero 6 (2014) blends superheroes with heartwarming friendship.\n\nBaymax became an instant fan favorite.\n\nIt won the Academy Award for Best Animated Feature.",
+
+WreckItRalph: "Wreck-It Ralph (2012) explores video game worlds through Ralph’s redemption.\n\nIts creativity and humor resonated with gamers and families alike.\n\nThe film became a standout Disney hit.",
+
+RalphBreaksInternet: "Ralph Breaks the Internet (2018) takes Ralph and Vanellope into the online world.\n\nIt parodies internet culture while telling a story of friendship.\n\nThe film expanded the franchise with modern themes.",
+
+MonstersInc: "Monsters, Inc. (2001) follows Sulley and Mike in a world powered by children’s screams.\n\nIts humor and heart made it a Pixar classic.\n\nThe film introduced unforgettable characters and a unique setting.",
+
+MonstersUniversity: "Monsters University (2013) is a prequel showing Mike and Sulley’s college days.\n\nIt explores their friendship and rivalry origins.\n\nThe film was praised for its humor and vibrant animation.",
+
+Cars: "Cars (2006) tells the story of Lightning McQueen learning humility.\n\nIt celebrates small-town life and personal growth.\n\nThe film launched a successful Pixar franchise.",
+
+Cars2: "Cars 2 (2011) shifts into a spy adventure featuring Mater.\n\nThough divisive, it expanded the Cars universe.\n\nThe film kept the franchise alive for younger fans.",
+
+Cars3: "Cars 3 (2017) returns to Lightning’s racing journey.\n\nIt focuses on mentorship and passing the torch.\n\nThe film redeemed the series with heartfelt storytelling.",
+
+Braveheart: "Braveheart (1995) tells the story of William Wallace leading Scotland’s fight for freedom.\n\nMel Gibson’s direction and performance were widely praised.\n\nThe film won five Academy Awards including Best Picture.",
+
+Gladiator: "Gladiator (2000) follows a betrayed Roman general seeking justice.\n\nIts epic battles and emotional story captivated audiences.\n\nIt won multiple Oscars and remains a classic of the genre.",
+
+Troy: "Troy (2004) adapts Homer’s Iliad with Brad Pitt as Achilles.\n\nIt dramatizes the legendary Trojan War with grandeur.\n\nThe film remains popular for its action and mythological scale.",
+
+300: "300 (2006) tells the story of the Battle of Thermopylae.\n\nIts stylized visuals and action sequences became iconic.\n\nThe film popularized a new approach to graphic novel adaptations.",
+
+Spartacus: "Spartacus (1960) is a classic epic about a slave revolt in ancient Rome.\n\nDirected by Stanley Kubrick, it starred Kirk Douglas.\n\nIt remains influential as one of the great historical dramas.",
+
+BenHur: "Ben-Hur (1959) tells the story of betrayal and revenge in ancient Rome.\n\nThe chariot race remains one of the most famous sequences in cinema history.\n\nIt won 11 Academy Awards, a record at the time.",
+TheHowsOfUs: "The Hows of Us (2018) - A romantic drama directed by Cathy Garcia-Molina about a couple whose relationship is tested by long distance and life’s unexpected demands.\n\nKathryn Bernardo and Daniel Padilla star as Primo and George, whose dreams diverge as they try to build a life together. The film explores trust, sacrifice, and the meaning of home.\n\nIt became one of the highest grossing Filipino films, resonating deeply with audiences for its emotional honesty and strong performances." ,
+
+HelloLoveGoodbye: "Hello, Love, Goodbye (2019) - A drama/romance by Cathy Garcia-Molina centering on Joy and Ethan, overseas Filipino workers trying to balance duty, love, and identity.\n\nJoy works abroad while Ethan builds a life in the Philippines, and their relationship bridges career, family, and cultural divides. Their choice forces them to confront what it means to belong.\n\nThe film was a massive commercial success, becoming among the top grossers in PH, and praised for its authentic portrayal of OFW experience and stellar acting." ,
+
+TheMistress: "The Mistress (2012) - Romantic melodrama directed by Olivia Lamasan about forbidden love, guilt, and the price people pay for their secrets.\n\nJohn Lloyd Cruz and Bea Alonzo portray characters bound by regret, longing, and societal expectations. Their chemistry and the moral tension give the story depth.\n\nThe film was well received, set box office records, and is often cited as one of PH’s modern classics in romance cinema." ,
+
+BeautyAndTheBestie: "Beauty and the Bestie (2015) - Action-comedy directed by Wenn V. Deramas starring Vice Ganda and Coco Martin, mixing humor, family and spectacle.\n\nThe plot follows a celebrity bodyguard who has to protect two brothers, which leads to madcap chases, identity mix-ups, and dramatic moments. It balances slapstick and emotional stakes.\n\nIt was one of the highest-grossing Filipino films of its time, embraced by mass audiences for its entertainment value and comedic energy." ,
+
+DukotPH: "Dukot (2016) - A suspense thriller by Paul Soriano about a young man who is kidnapped; based loosely on corruption, ransom, and moral dilemmas.\n\nThe victim’s family must wrestle with crime, fear, and the media scrutiny while trying to save him. The film shows both desperation and the impacts of trauma on ordinary people.\n\nAudiences praised its pacing, performances, and the heavy emotional toll, making it a standout in recent Filipino suspense films." ,
+
+QuezonsGame: "Quezon’s Game (2018) - Historical drama inspired by real events when Manuel L. Quezon opened the Philippines to Jewish refugees during WWII.\n\nThe story follows the moral courage of those who risked against political pressure and rising global antisemitism. Scenes show compassion, political tension, and humanitarian sacrifice.\n\nIt received critical acclaim for bringing a lesser-known part of PH history to light, with strong performances and thoughtful storytelling." ,
+LoloAndTheKid: "Lolo and the Kid (2024) – A heartfelt drama directed by Benedict Mique that centers on an adult hustler who crosses paths with a child in need.\n\nEuwenn Mikaell plays the Kid, a young boy trying to survive harsh circumstances, while Joel Torre portrays the Lolo whose world is disrupted by the unexpected bond they form. Their unlikely relationship becomes a journey of hope, struggle, and healing.\n\nThe film premiered on Netflix and quickly resonated with audiences in the Philippines, topping local streaming charts for its emotional depth and performances." ,
+
+TatlongBibe: "Tatlong Bibe (2017) – A musical comedy-drama written and directed by Joven Tan about three young children whose lives intersect through a shared love of singing.\n\nLyca Gairanod, Raikko Mateo, and Marco Masa star alongside veteran actors like Eddie Garcia, bringing heart, innocence, and intergenerational tension to the screen. The themes of family, identity, childhood, and loss underlie the songs and scenes.\n\nThough light in moments, the film also explores grief and the bonds that tie people together. It was notable for its ensemble cast and soundtrack, becoming a memorable entry in Filipino family cinema." ,
+
+TulaParaKayStella: "100 Tula Para Kay Stella (2017) – A romantic film by Jason Paul Laxamana following a young college student who composes 100 poems for the woman he loves, Stella.\n\nBela Padilla plays Stella, aspiring to be a rock star, while JC Santos is the poet trying to express feelings through words while grappling with self-worth and fear. The storytelling uses poetry and music as emotional anchors, interspersed with everyday challenges of youth and love.\n\nThe film struck a chord with audiences, especially among younger viewers, for its honest look at longing, heartbreak, and the beauty of trying—even when fears hold you back." ,
+ManilaClawsOfLight: "Manila in the Claws of Light (1975) – A neo-noir drama by Lino Brocka that tells the story of Julio, a man from the province, who journeys to Manila to reunite with his lover, Ligaya.\n\nOnce in Manila, he encounters poverty, exploitation, and moral decay, struggling to survive the harsh realities of the city. The film explores themes of disillusionment, corruption, and the loss of innocence.\n\nCritically acclaimed, it is considered one of the greatest Philippine films of all time. Brocka’s vision and the film’s unflinching look at urban life continue to resonate with audiences.:contentReference[oaicite:0]{index=0}",
+
+Sidhi: "Sidhi (1999) – Directed by Joel Lamangan, this drama revolves around a man’s sacrifice and redemption in the rural provinces.\n\nBased on Rolando Tinio’s Palanca-winning teleplay, the film delves into themes of love, guilt, identity, and family responsibility. The setting amplifies the emotional intensity and the characters’ internal struggles.\n\nSidhi won multiple supporting actress awards in the Philippines, with performances by Nora Aunor, Albert Martinez, and Glydel Mercado earning praise.:contentReference[oaicite:1]{index=1}",
+
+Birdshot: "Birdshot (2016) – A crime-drama film directed by Mikhail Red, focusing on a young farm girl who accidentally kills one of the country’s last Philippine eagles.\n\nHer act triggers a chain of events involving criminal investigations and political corruption, all woven into the socio-ecological issues affecting rural communities. The film blends haunting visuals with social commentary.\n\nIt was praised for its cinematography, thematic depth, and has been featured in local and international film festivals for shining light on environmental and moral issues in modern Philippine society.:contentReference[oaicite:2]{index=2}",
+
+Kubrador: "Kubrador (2006) – Follows the life of a woman who works as a bet collector in Manila’s numbers game underworld.\n\nAmid poverty and daily hardships, she tries to protect her integrity while caring for her children. It shows the struggle of ordinary people trapped in cycles of economic inequality.\n\nThe film is noted for its realism, empathy for the marginalized, and powerful storytelling that does not rely on sensationalism.:contentReference[oaicite:3]{index=3}",
+
+OnTheJob: "On the Job (2013) – Directed by Erik Matti, this crime thriller revolves around prisoners who are temporarily released to carry out contract killings for powerful figures.\n\nThe film explores corruption, moral ambiguity, and the link between prison and politics, while also depicting the personal costs to those involved. The intersecting lives of characters show how systemic violence is upheld.\n\nIt gained recognition for its gritty realism, tight direction, and commentary on justice in the Philippines.:contentReference[oaicite:4]{index=4}",
+
+JoseRizal: "Jose Rizal (1998) – A historical biopic by Marilou Abaya about the national hero Dr. José Rizal and his life under Spanish colonial rule.\n\nThe film portrays his intellectual growth, his writings that inspired a revolution, and the personal struggles he faced due to censorship, exile, and persecution. It also shows the social injustices in colonial Philippines.\n\nWidely regarded as one of the most important Philippine historical films, it won many awards and is often a reference point for history and identity in Filipino culture.:contentReference[oaicite:5]{index=5}",
+
+OroPlataMata: "Oro, Plata, Mata (1982) – Directed by Peque Gallaga, this film traces the decline of two wealthy Filipino families during World War II.\n\nSet in Negros province, it contrasts the pastoral life before war and the chaos that war brings — loss, survival, moral compromise, and human cruelty. The structure of the film reflects how prosperity turns to tragedy.\n\nThe film is acclaimed for its rich visuals, powerful storytelling, and depth in exploring the human condition under upheaval.:contentReference[oaicite:6]{index=6}",
+
+Himala: "Himala (1982) – Directed by Ishmael Bernal and starring Nora Aunor, this film is about a woman who claims to have seen an apparition, leading a village to believe miracles may happen.\n\nThemes of faith, skepticism, collective hysteria, and social pressure unfold in a small rural community. The story examines how people cope under belief, hope, and desperation.\n\nIt is frequently listed among the best Filipino movies, and its iconic line “Walang Himala!” remains part of Filipino cultural memory.:contentReference[oaicite:7]{index=7}",
+
+Kisapmata: "Kisapmata (1981) – A psychological drama by Mike de Leon, focused on a young woman trapped in her father’s oppressive authority and a suffocating home.\n\nThe film portrays themes of patriarchy, desire, mental suffering, and fear. Subtle, intense performances and direction give the sense of claustrophobia and internal conflict.\n\nKisapmata is highly regarded critically and remains influential for its craftsmanship and emotional impact.:contentReference[oaicite:8]{index=8}",
+SwordArtOnline: "Sword Art Online begins when thousands of players are trapped inside a virtual reality MMORPG, unable to log out. Kirito, a skilled player, must fight his way through the deadly game where dying inside means dying in real life.\n\nThe anime explores the boundaries between reality and virtual worlds, as Kirito forms bonds, faces moral challenges, and uncovers dark secrets behind the games.\n\nWhile polarizing, Sword Art Online became a massive hit, sparking debates on technology, relationships, and identity in the digital age.",
+
+TokyoGhoul: "Tokyo Ghoul is set in a world where flesh-eating ghouls live hidden among humans. The story follows Kaneki, a college student who becomes half-ghoul after a fateful encounter.\n\nThe anime examines identity, morality, and survival as Kaneki struggles to live between two worlds while facing persecution and inner conflict.\n\nTokyo Ghoul gained popularity for its dark tone, tragic characters, and exploration of what it means to be human in a cruel society.",
+
+NeonGenesisEvangelion: "Neon Genesis Evangelion follows teenagers piloting giant mechs called Evangelions to fight mysterious beings known as Angels. Shinji Ikari, the reluctant protagonist, embodies themes of trauma and alienation.\n\nThe anime blends action with deep psychological and philosophical commentary, challenging viewers to confront questions of existence and purpose.\n\nEvangelion is considered one of the most influential anime ever created, shaping mecha and storytelling in anime for decades.",
+
+FairyTail: "Fairy Tail follows the adventures of Natsu Dragneel, a fire wizard, and his guildmates in the magical land of Fiore. The anime emphasizes camaraderie, loyalty, and the strength found in friendship.\n\nEach arc combines humor, action, and emotional stakes, as characters confront enemies while supporting one another.\n\nFairy Tail became a fan favorite, known for its fun atmosphere, epic fights, and heartfelt bonds between guild members.",
+
+BlackClover: "Black Clover centers on Asta and Yuno, orphans raised together with dreams of becoming the Wizard King. Asta, born without magic, relies on determination and anti-magic abilities.\n\nThe anime showcases intense rivalries, teamwork, and personal growth as the duo faces powerful foes.\n\nBlack Clover has been praised for its energy, dynamic battles, and the underdog story that inspires viewers to never give up.",
+
+JujutsuKaisen: "Jujutsu Kaisen follows Yuji Itadori, a high schooler who becomes host to a cursed spirit named Sukuna after ingesting a dangerous relic. He joins a group of sorcerers to fight curses.\n\nThe anime combines fast-paced battles with emotional depth, exploring themes of loss and the will to keep moving forward.\n\nJujutsu Kaisen exploded in popularity for its crisp animation, well-written characters, and stylish combat.",
+
+CodeGeass: "Code Geass tells the story of Lelouch, a prince who gains the power of Geass, allowing him to command anyone. He uses this gift to lead a rebellion against a tyrannical empire.\n\nThe anime blends mecha action with political intrigue, betrayal, and moral dilemmas. Lelouch’s intelligence and charisma drive the series.\n\nCode Geass is praised for its twists, layered characters, and one of the most memorable endings in anime history.",
+
+SoulEater: "Soul Eater takes place at the Death Weapon Meister Academy, where students train to battle evil using weapons that are also human. Maka and her weapon partner Soul form the core duo.\n\nThe anime combines gothic aesthetics, humor, and high-energy battles, while exploring themes of courage and madness.\n\nSoul Eater stood out for its unique art style and vibrant characters, making it a cult favorite.",
+
+Inuyasha: "Inuyasha follows Kagome, a modern-day girl transported to feudal Japan, where she meets Inuyasha, a half-demon. Together, they search for the shards of the Shikon Jewel.\n\nThe anime mixes romance, adventure, and supernatural battles, with the central relationship between Inuyasha and Kagome being its emotional core.\n\nInuyasha became a beloved classic, known for its long run, memorable characters, and heartfelt storytelling.",
+
+YuYuHakusho: "Yu Yu Hakusho tells the story of Yusuke Urameshi, a delinquent who dies saving a child and is given a second chance as a Spirit Detective. He investigates supernatural crimes and fights powerful demons.\n\nThe anime balances action with character growth, highlighting themes of redemption and friendship.\n\nA staple of '90s anime, Yu Yu Hakusho is celebrated for its iconic fights and emotional arcs.",
+
+CowboyBebop: "Cowboy Bebop follows Spike Spiegel and his crew of bounty hunters as they travel through space, chasing criminals while facing their pasts. Each episode mixes genres, from noir to comedy.\n\nThe anime explores loneliness, existentialism, and human connection, supported by a legendary jazz soundtrack.\n\nCowboy Bebop remains a timeless masterpiece, influencing anime and Western media alike with its style and themes.",
+
+SamuraiChamploo: "Samurai Champloo tells the story of Fuu, a waitress who recruits two wandering swordsmen, Mugen and Jin, for a journey across Edo-era Japan. The anime fuses historical themes with hip-hop culture.\n\nEach episode delivers unique adventures, combining humor, philosophy, and stylized combat.\n\nKnown for its creativity and soundtrack, Samurai Champloo is regarded as an artistic and cultural gem in anime.",
+
+RurouniKenshin: "Rurouni Kenshin follows a wandering swordsman who vows never to kill again after his violent past as an assassin. He protects the innocent while confronting enemies tied to his history.\n\nThe anime reflects themes of redemption, peace, and the consequences of violence.\n\nRurouni Kenshin is admired for its blend of history, romance, and thrilling sword fights.",
+
+Trigun: "Trigun centers on Vash the Stampede, a gunman with a mysterious past and a reputation for destruction, despite his pacifist nature. Set in a desert wasteland, the anime blends Western and sci-fi genres.\n\nThe series balances comedy with serious moral questions about violence and forgiveness.\n\nTrigun is a classic that endures for its unique protagonist and heartfelt storytelling.",
+
+SteinsGate: "Steins;Gate follows Rintarou Okabe, a self-proclaimed mad scientist who accidentally discovers time travel through a microwave. With his friends, he becomes entangled in conspiracies.\n\nThe anime combines science fiction with emotional character arcs, exploring fate, choice, and sacrifice.\n\nSteins;Gate is hailed as one of the best sci-fi anime, renowned for its clever narrative and emotional impact.",
+
+ParanoiaAgent: "Paranoia Agent is a psychological thriller about a mysterious attacker called 'Lil' Slugger' who assaults people across Tokyo. Each case reveals hidden fears and societal pressures.\n\nThe anime explores the dark side of human psychology, blending surrealism with mystery.\n\nCreated by Satoshi Kon, Paranoia Agent is regarded as a haunting masterpiece of psychological storytelling.",
+
+Monster: "Monster follows Dr. Tenma, a Japanese surgeon in Germany who saves a boy destined to become a monstrous killer. Wracked with guilt, Tenma sets out to stop the evil he helped create.\n\nThe anime is a slow-burn thriller, exploring morality, justice, and the darkness within human nature.\n\nMonster is widely praised for its suspenseful storytelling and philosophical depth.",
+
+GreatTeacherOnizuka: "Great Teacher Onizuka (GTO) follows Eikichi Onizuka, a former gang member turned teacher who wants to be the greatest high school teacher. His unconventional methods inspire troubled students.\n\nThe anime mixes comedy with heartfelt life lessons, tackling social issues with humor and sincerity.\n\nGTO is cherished for its balance of laughs and inspiring messages about education and growth.",
+
+Clannad: "Clannad tells the story of Tomoya, a delinquent who meets Nagisa, a frail girl with big dreams. The series explores love, family, and the struggles of growing up.\n\nThe anime’s sequel, Clannad: After Story, is especially known for its emotional depth and heartbreaking moments.\n\nClannad is regarded as one of the most moving romance and drama anime ever made.",
+
+YourLieInApril: "Your Lie in April follows Kousei, a piano prodigy who loses his ability to hear the piano after his mother’s death. His life changes when he meets Kaori, a spirited violinist.\n\nThe anime explores themes of grief, healing, and the transformative power of music and love.\n\nWith beautiful animation and a touching story, Your Lie in April left audiences worldwide deeply moved.",
+
+Anohana: "Anohana: The Flower We Saw That Day tells the story of childhood friends who drift apart after a tragedy. Years later, the ghost of their friend Menma brings them back together.\n\nThe anime explores guilt, friendship, and the process of healing from loss.\n\nAnohana is remembered for its emotional storytelling, leaving many viewers in tears.",
+
+Toradora: "Toradora is a romantic comedy about Ryuuji, a kind boy with a scary face, and Taiga, a fierce but tiny girl. They form an unlikely alliance to help each other with their crushes.\n\nThe anime balances humor with heartfelt moments, capturing the struggles of teenage love.\n\nToradora is considered one of the best romance anime, cherished for its characters and satisfying conclusion.",
+
+FruitsBasket: "Fruits Basket follows Tohru, a kind girl who becomes involved with the Sohma family, cursed to transform into zodiac animals when hugged by the opposite sex.\n\nThe anime deals with themes of kindness, trauma, and acceptance, blending comedy with drama.\n\nThe 2019 remake especially won praise for faithfully adapting the manga’s heartfelt story.",
+
+KurokoNoBasket: "Kuroko’s Basketball tells the story of Kuroko, a seemingly invisible player, and Kagami, a talented newcomer. Together, they challenge the 'Generation of Miracles' in high school basketball.\n\nThe anime emphasizes teamwork, determination, and the love of the sport.\n\nKuroko’s Basketball gained popularity for its exciting matches and inspiring underdog narrative.",
+
+Haikyuu: "Haikyuu follows Shoyo Hinata, a passionate volleyball player who dreams of becoming a star despite his short height. He joins Karasuno High’s team and learns the value of teamwork.\n\nThe anime highlights perseverance, bonds, and the emotional highs and lows of competition.\n\nHaikyuu became one of the most beloved sports anime, praised for its realism and motivation.",
+
+SlamDunk: "Slam Dunk tells the story of Hanamichi Sakuragi, a delinquent who joins his high school basketball team to impress a girl. Despite his lack of experience, he grows into a true player.\n\nThe anime captures the excitement of basketball while exploring themes of teamwork and perseverance.\n\nSlam Dunk is considered a classic, credited with popularizing basketball in Japan.",
+
+InitialD: "Initial D follows Takumi Fujiwara, a tofu delivery driver with unmatched drifting skills. He becomes a legend in the world of street racing.\n\nThe anime combines racing action with themes of passion, growth, and rivalry.\n\nInitial D is iconic for its Eurobeat soundtrack and influence on car culture worldwide.",
+
+AkameGaKill: "Akame ga Kill follows Tatsumi, a young warrior who joins Night Raid, an assassin group fighting against a corrupt empire. The anime features intense battles and tragic sacrifices.\n\nThe series highlights the brutality of war and the cost of fighting for justice.\n\nAkame ga Kill gained fame for its shocking twists and willingness to kill off major characters.",
+
+ElfenLied: "Elfen Lied tells the story of Lucy, a mutant with deadly powers who escapes captivity, leaving destruction in her path. Despite her violence, the anime explores her tragic past.\n\nThe series combines graphic violence with themes of discrimination, trauma, and humanity.\n\nElfen Lied is controversial but influential, remembered for its emotional weight and brutality.",
+
+ReZero: "Re:Zero - Starting Life in Another World follows Subaru, who is transported to a fantasy world and discovers he can rewind time upon death. He struggles to protect those he cares about.\n\nThe anime explores suffering, resilience, and the psychological toll of endless failure.\n\nRe:Zero became a hit isekai series, admired for its unique concept and dark twists.",
+
+Konosuba: "Konosuba is a comedy isekai about Kazuma, who dies and is sent to a fantasy world with a useless goddess, Aqua. Alongside eccentric companions, he faces absurd adventures.\n\nThe anime parodies RPG tropes with humor while still delivering heartwarming moments.\n\nKonosuba is beloved for its comedy, quirky characters, and lighthearted take on isekai.",
+
+NoGameNoLife: "No Game No Life follows siblings Sora and Shiro, undefeated gamers transported to a world where games decide everything. They aim to challenge and overthrow the god of games.\n\nThe anime is filled with strategy, creativity, and vibrant visuals.\n\nNo Game No Life is celebrated for its clever battles and colorful art style.",
+
+DrStone: "Dr. Stone tells the story of Senku, a genius who awakens in a world where humanity has turned to stone. Using science, he rebuilds civilization from scratch.\n\nThe anime blends adventure with educational elements, showcasing the power of human knowledge.\n\nDr. Stone is admired for its unique concept, humor, and inspiring message about science.",
+
+ThePromisedNeverland: "The Promised Neverland follows children in an orphanage who discover they are being raised as food for monsters. Emma, Norman, and Ray devise an escape plan.\n\nThe anime balances suspense with themes of trust, survival, and sacrifice.\n\nThe first season is especially praised for its chilling story and gripping tension.",
+
+BlueExorcist: "Blue Exorcist follows Rin Okumura, who learns he is the son of Satan. Determined to fight his fate, he trains as an exorcist to protect humanity.\n\nThe anime combines supernatural battles with themes of family, identity, and rebellion.\n\nBlue Exorcist became popular for its stylish action and emotional storytelling.",
+
+SeraphOfTheEnd: "Seraph of the End is set in a post-apocalyptic world where vampires enslave humanity. Yuichiro, a survivor, joins the resistance to fight back.\n\nThe anime blends dark fantasy with emotional bonds, focusing on themes of revenge and hope.\n\nIts striking visuals and intense story earned it a dedicated fanbase.",
+
+MadeInAbyss: "Made in Abyss follows Riko, a girl who ventures into a vast abyss filled with dangers, searching for her mother. She is joined by a mysterious robot boy named Reg.\n\nThe anime contrasts cute visuals with dark, emotional storytelling, exploring sacrifice and survival.\n\nMade in Abyss is acclaimed for its world-building and emotional depth, though it can be deeply unsettling.",
+
+Noragami: "Noragami tells the story of Yato, a minor god who dreams of having millions of worshippers. With his regalia partner Yukine and a human girl named Hiyori, he takes odd jobs to gain followers.\n\nThe anime blends humor with heartfelt arcs about faith, identity, and belonging.\n\nNoragami became popular for its balance of comedy, action, and emotional storytelling.",
+DeathNote: "Death Note, adapted from Tsugumi Ohba and Takeshi Obata’s manga, tells the story of Light Yagami, a genius who discovers a notebook that can kill anyone whose name is written in it. With it, he attempts to create a world free of crime.\n\nThe anime builds tension through the cat-and-mouse battle between Light and the brilliant detective L. Their psychological duel is a hallmark of anime suspense.\n\nDeath Note is one of the most famous adaptations, praised for its clever writing, moral dilemmas, and iconic characters.",
+
+AttackOnTitan: "Attack on Titan, based on Hajime Isayama’s manga, is set in a world besieged by giant humanoid creatures called Titans. Humanity hides behind massive walls to survive.\n\nThe story follows Eren Yeager, Mikasa Ackerman, and Armin Arlert as they fight to reclaim freedom. Themes of war, survival, and the cycle of violence shape the narrative.\n\nAttack on Titan became a global phenomenon, blending action, mystery, and tragedy into one of the most influential anime adaptations of the 21st century.",
+
+FullmetalAlchemist: "Fullmetal Alchemist, adapted from Hiromu Arakawa’s manga, tells the story of Edward and Alphonse Elric, two brothers who suffer tragic consequences after using forbidden alchemy.\n\nTheir journey to restore their bodies leads them into conflicts involving war, morality, and the cost of ambition. Brotherhood and sacrifice are central themes.\n\nThe Brotherhood adaptation is especially celebrated for faithfully adapting the manga, creating one of the most beloved anime ever made.",
+
+Naruto: "Naruto, adapted from Masashi Kishimoto’s manga, follows Naruto Uzumaki, a spirited ninja ostracized for the demon fox sealed inside him. His dream is to become Hokage, the strongest ninja and leader of his village.\n\nThe anime balances intense battles with heartfelt friendships, exploring perseverance, loneliness, and redemption.\n\nNaruto grew into one of the most influential shonen anime, paving the way for a global wave of manga-inspired adaptations.",
+
+Bleach: "Bleach, based on Tite Kubo’s manga, tells the story of Ichigo Kurosaki, a teenager who becomes a Soul Reaper tasked with protecting souls and defeating evil spirits known as Hollows.\n\nThe series mixes action, stylish designs, and supernatural themes. Its battles against powerful enemies highlight Ichigo’s growth.\n\nBleach was a pillar of shonen anime alongside Naruto and One Piece, leaving a major impact on anime culture worldwide.",
+
+OnePiece: "One Piece, adapted from Eiichiro Oda’s manga, follows Monkey D. Luffy and his crew as they sail across dangerous seas in search of the legendary treasure, the One Piece.\n\nThe anime is an adventure filled with friendship, freedom, and resilience. Its colorful world, emotional arcs, and endless creativity make it unique.\n\nOne Piece is the longest-running and most successful manga adaptation, beloved across generations for its charm and depth.",
+
+HunterXHunter: "Hunter x Hunter, adapted from Yoshihiro Togashi’s manga, follows Gon Freecss, a boy who aspires to become a Hunter and find his missing father. His journey introduces him to friends and dangerous challenges.\n\nThe anime balances adventure, strategy, and emotional arcs with dark undertones. Each arc offers unique conflicts and moral dilemmas.\n\nHunter x Hunter is hailed as one of the most intelligent shonen adaptations, blending action with psychological storytelling.",
+
+DragonBall: "Dragon Ball, based on Akira Toriyama’s manga, follows Son Goku from childhood adventures to epic martial arts battles. Its sequel, Dragon Ball Z, expands into larger-than-life conflicts.\n\nThemes of perseverance, friendship, and fighting spirit define the series. Iconic battles like Goku vs. Frieza set the standard for shonen anime.\n\nDragon Ball became a global phenomenon, introducing anime to mainstream audiences and influencing countless future adaptations.",
+
+JoJosBizarreAdventure: "JoJo’s Bizarre Adventure, adapted from Hirohiko Araki’s manga, is a multigenerational saga following the Joestar family and their battles against supernatural enemies.\n\nEach part introduces new characters, powers, and unique storytelling styles. From vampiric horror to flamboyant Stand battles, it reinvents itself constantly.\n\nJoJo became a cult favorite and cultural icon, known for its creativity, eccentricity, and stylish adaptation of Araki’s legendary manga.",
+
+MyHeroAcademia: "My Hero Academia, adapted from Kohei Horikoshi’s manga, is set in a world where most people have superpowers known as Quirks. It follows Izuku Midoriya, a boy born powerless who inherits the ability of the greatest hero.\n\nThe anime explores themes of courage, legacy, and what it means to be a hero. Its mix of action and heartfelt struggles made it a new-generation shonen hit.\n\nMy Hero Academia’s faithful adaptation has won fans worldwide, influencing modern anime culture.",
+
+YuYuHakusho: "Yu Yu Hakusho, adapted from Yoshihiro Togashi’s manga, follows Yusuke Urameshi, a delinquent who dies saving a child but is resurrected as a Spirit Detective.\n\nThe anime blends supernatural battles with heartfelt character development. Each arc grows in intensity, exploring teamwork and personal growth.\n\nYu Yu Hakusho is considered a classic, laying the foundation for many battle shonen that followed.",
+
+RurouniKenshin: "Rurouni Kenshin, based on Nobuhiro Watsuki’s manga, follows Himura Kenshin, a wandering swordsman who vows never to kill again after his bloody past as an assassin.\n\nThe anime balances action with themes of redemption, peace, and forgiveness. Kenshin’s gentle heart contrasts with his violent skills.\n\nRurouni Kenshin became one of the most iconic samurai anime, admired for its character depth and historical flavor.",
+
+Inuyasha: "Inuyasha, adapted from Rumiko Takahashi’s manga, tells the story of Kagome, a modern girl who falls into Japan’s feudal era, where she meets Inuyasha, a half-demon searching for the Sacred Jewel.\n\nTheir adventure mixes romance, fantasy, and battles against demons. Themes of love, betrayal, and destiny run strong.\n\nInuyasha became a worldwide hit, blending folklore with accessible storytelling for anime fans of all ages.",
+
+DGrayMan: "D.Gray-man, based on Katsura Hoshino’s manga, follows Allen Walker, an exorcist fighting against cursed beings known as Akuma created by the sinister Millennium Earl.\n\nThe series combines gothic aesthetics with emotional storytelling, exploring sacrifice and the burden of destiny.\n\nThough its anime adaptations were sometimes incomplete, D.Gray-man remains beloved for its dark, emotional depth.",
+
+SoulEater: "Soul Eater, adapted from Atsushi Ohkubo’s manga, takes place in the Death Weapon Meister Academy, where students train to battle evil souls. Meisters partner with living weapons that transform into human form.\n\nThe anime combines action, gothic style, and quirky humor. Its characters explore friendship and courage while battling deadly foes.\n\nSoul Eater became iconic for its unique style and thrilling battles, cementing its place as a beloved shonen adaptation.",
+
+FairyTail: "Fairy Tail, based on Hiro Mashima’s manga, tells the story of Natsu Dragneel, Lucy Heartfilia, and their guild of powerful wizards.\n\nThe anime thrives on camaraderie, over-the-top battles, and emotional bonds among guild members. Themes of friendship and perseverance dominate.\n\nFairy Tail was a global hit, offering heartfelt adventures and spectacular battles for fans of shonen anime.",
+
+AkameGaKill: "Akame ga Kill!, adapted from Takahiro and Tetsuya Tashiro’s manga, follows Tatsumi, a young fighter who joins an assassin group fighting against a corrupt empire.\n\nThe anime mixes action with tragedy, as characters face brutal fates. It explores rebellion, sacrifice, and the price of revolution.\n\nAkame ga Kill! is remembered for its shocking twists and emotional impact, despite diverging from the manga’s original ending.",
+
+ThePromisedNeverland: "The Promised Neverland, based on Kaiu Shirai and Posuka Demizu’s manga, follows children raised in an orphanage who discover a horrifying secret and plan their escape.\n\nThe series is filled with suspense, strategy, and emotional stakes as the kids fight for survival against impossible odds.\n\nIts first season was widely praised as a masterful adaptation, though later seasons diverged, leaving fans divided.",
+
+Nana: "Nana, adapted from Ai Yazawa’s manga, follows two women named Nana whose lives intertwine as they pursue love and ambition in Tokyo.\n\nThe anime mixes romance, music, and drama, exploring relationships, heartbreak, and dreams. Its realistic portrayal of young adulthood set it apart.\n\nNana remains one of the most powerful shojo adaptations, deeply resonating with audiences for its emotional authenticity.",
+
+KurokoNoBasket: "Kuroko no Basket, adapted from Tadatoshi Fujimaki’s manga, follows a high school basketball team striving for victory. Among them is Kuroko, a player who uses misdirection rather than strength.\n\nThe anime combines sports action with themes of teamwork, rivalry, and determination. Each game becomes a test of spirit and skill.\n\nKuroko no Basket became a massive sports anime hit, celebrated for its energy and passion.",
+
+Toriko: "Toriko, based on Mitsutoshi Shimabukuro’s manga, follows Toriko, a Gourmet Hunter searching for the rarest ingredients in a fantastical world.\n\nThe anime is filled with action, comedy, and bizarre yet creative battles against monstrous creatures.\n\nThough it didn’t reach the same popularity as other shonen giants, Toriko remains a fun and unique adaptation for food and adventure fans.",
+
+AstroBoy: "Astro Boy, adapted from Osamu Tezuka’s pioneering manga, tells the story of a robot boy created to replace a scientist’s lost son. Gifted with incredible powers, he fights for justice.\n\nThe series is both a superhero tale and a philosophical exploration of humanity and technology.\n\nAstro Boy is regarded as the grandfather of manga adaptations, influencing decades of anime storytelling.",
+
+Hellsing: "Hellsing, based on Kouta Hirano’s manga, follows the vampire Alucard, who works for the Hellsing Organization to fight supernatural threats in England.\n\nThe anime is filled with gothic horror, action, and dark humor. Themes of power and monstrosity dominate.\n\nHellsing Ultimate, the faithful OVA adaptation, became iconic for its stylish violence and loyal manga adaptation.",
+
+Trigun: "Trigun, based on Yasuhiro Nightow’s manga, follows Vash the Stampede, a gunslinger with a huge bounty on his head but a heart of gold.\n\nThe series blends Western themes, comedy, and tragedy as Vash struggles to uphold his pacifist ideals.\n\nTrigun became a cult classic, admired for its character depth and philosophical storytelling.",
+
+SlamDunk: "Slam Dunk, adapted from Takehiko Inoue’s manga, follows Hanamichi Sakuragi, a delinquent who joins his high school basketball team to impress a girl.\n\nThe anime combines humor with sports drama, capturing the excitement of youth and determination.\n\nSlam Dunk became one of Japan’s most influential sports anime, inspiring generations of basketball fans.",
+
+Beelzebub: "Beelzebub, based on Ryuhei Tamura’s manga, tells the comedic story of delinquent Oga Tatsumi, who ends up raising the baby son of a demon lord.\n\nThe anime mixes over-the-top action with absurd humor. Themes of unlikely responsibility and chaos dominate.\n\nThough short-lived, Beelzebub became a fan-favorite for its wild energy and comedy.",
+
+ShamanKing: "Shaman King, adapted from Hiroyuki Takei’s manga, follows Yoh Asakura, a boy who can communicate with spirits and competes in the Shaman Fight to become the Shaman King.\n\nThe anime blends supernatural action with themes of peace and understanding. Yoh’s laid-back attitude contrasts with intense battles.\n\nThe 2021 reboot gave fans a faithful adaptation, bringing new life to a beloved classic.",
+
+KatekyoHitmanReborn: "Katekyo Hitman Reborn!, based on Akira Amano’s manga, tells the story of Tsuna, a timid boy who discovers he is heir to a mafia family. With help from the baby hitman Reborn, he grows into a leader.\n\nThe anime combines comedy, supernatural battles, and mafia drama. Tsuna’s growth is at the heart of the series.\n\nReborn! became a popular long-running shonen adaptation, though it never received a full conclusion.",
+
+Gintama: "Gintama, adapted from Hideaki Sorachi’s manga, is set in an alternate Edo period where aliens rule Japan. It follows Gintoki Sakata, a lazy samurai who takes odd jobs.\n\nThe anime mixes absurd comedy with emotional, action-packed arcs. Its ability to switch between parody and seriousness made it stand out.\n\nGintama is considered one of the funniest and most versatile manga adaptations ever made.",
+
+YuGiOh: "Yu-Gi-Oh!, adapted from Kazuki Takahashi’s manga, follows Yugi Mutou, who unleashes the spirit of an ancient Pharaoh through a mystical puzzle. Together, they duel opponents in games of strategy.\n\nThe anime focuses on friendship, rivalry, and the thrill of battles. Its trading card game tie-in became a worldwide phenomenon.\n\nYu-Gi-Oh! became a pop culture icon, spawning numerous spinoffs and global fandom.",
+
+SkipBeat: "Skip Beat!, based on Yoshiki Nakamura’s manga, follows Kyoko Mogami, a girl betrayed by her childhood crush who seeks revenge by entering the entertainment industry.\n\nThe anime blends comedy and drama, exploring themes of self-worth, ambition, and healing.\n\nSkip Beat! remains beloved for its strong heroine and witty storytelling, though fans still hope for a second season.",
+
+DragonQuest: "Dragon Quest: The Adventure of Dai, adapted from Riku Sanjo’s manga, follows Dai, a young boy with heroic aspirations in a world filled with monsters and magic.\n\nThe anime mixes classic RPG-style adventures with emotional storytelling, drawing from the popular game franchise.\n\nIts 2020 reboot brought renewed attention, offering a faithful and modern adaptation of the original story.",
+
+RosarioVampire: "Rosario + Vampire, based on Akihisa Ikeda’s manga, tells the story of Tsukune Aono, a human boy who unknowingly enrolls in a school for monsters and falls for the vampire Moka.\n\nThe anime mixes comedy, romance, and supernatural battles. It focuses on acceptance and hidden identities.\n\nThough lighter than its manga counterpart, Rosario + Vampire gained fans for its fun premise.",
+
+BoysOverFlowers: "Boys Over Flowers (Hana Yori Dango), adapted from Yoko Kamio’s manga, follows Tsukushi Makino, a working-class girl who clashes with the wealthy and arrogant F4 at her elite school.\n\nThe anime blends romance, drama, and social commentary. Its Cinderella-style story captivated audiences.\n\nBoys Over Flowers became one of the most famous shojo adaptations, inspiring dramas across Asia.",
+
+Chobits: "Chobits, adapted from CLAMP’s manga, follows Hideki, a student who discovers Chi, an abandoned humanoid robot known as a Persocom.\n\nThe anime explores love, technology, and the meaning of humanity. Chi’s innocence raises deep questions about connection.\n\nChobits became a beloved adaptation for its unique mix of romance and science fiction.",
+
+CardCaptorSakura: "Cardcaptor Sakura, adapted from CLAMP’s manga, follows Sakura Kinomoto, a girl who discovers magical cards and must collect them while balancing school and friendships.\n\nThe anime blends magical girl themes with heartwarming coming-of-age stories. Its focus on love and courage made it iconic.\n\nCardcaptor Sakura remains one of the most beloved shojo anime worldwide.",
+
+RanmaHalf: "Ranma ½, based on Rumiko Takahashi’s manga, tells the comedic tale of Ranma Saotome, a martial artist cursed to turn into a girl when splashed with cold water.\n\nThe anime mixes martial arts battles with slapstick comedy and romance. Its bizarre premise created endless hijinks.\n\nRanma ½ became a fan favorite for its humor and unique concept, influencing many romantic comedies that followed.",
+
+HikaruNoGo: "Hikaru no Go, adapted from Yumi Hotta and Takeshi Obata’s manga, follows Hikaru, a boy who discovers a Go board haunted by the spirit of an ancient player.\n\nThe anime turns the traditional board game into an epic coming-of-age journey. Themes of passion and growth shine.\n\nHikaru no Go is praised as one of the best sports/strategy adaptations, introducing many fans to the game of Go.",
+
+OutlawStar: "Outlaw Star, based on Takehiko Ito’s manga, follows Gene Starwind and his crew as they travel through space in search of treasure and adventure.\n\nThe anime blends space opera, action, and comedy with themes of freedom and camaraderie.\n\nOutlaw Star became a cult hit, remembered for its unique mix of genres and nostalgic appeal.",
+
+OranHighSchoolHostClub: "Ouran High School Host Club, adapted from Bisco Hatori’s manga, follows Haruhi Fujioka, a student who disguises herself as a boy to repay a debt to her school’s host club.\n\nThe anime blends comedy, romance, and parody of shojo tropes. Its witty humor and charming characters won fans instantly.\n\nOuran remains a fan-favorite adaptation, loved for its humor and heartfelt moments.",
+
+Bakuman: "Bakuman, based on Tsugumi Ohba and Takeshi Obata’s manga, follows two teens who dream of becoming successful manga creators. It portrays the struggles of the manga industry itself.\n\nThe anime blends ambition, romance, and creativity, showing the challenges of chasing dreams.\n\nBakuman is praised for its realistic and inspiring look at the world of manga, making it a unique adaptation.",
+SavingPrivateRyan: "Saving Private Ryan (1998), directed by Steven Spielberg, follows a group of U.S. soldiers during World War II who are tasked with finding and bringing home Private James Ryan after his brothers are killed in combat.\n\nThe film explores themes of sacrifice, duty, and the human cost of war. Its opening D-Day sequence is regarded as one of the most realistic depictions of battle ever put on screen.\n\nWidely considered a masterpiece, Saving Private Ryan redefined the war movie genre and influenced countless films that followed.",
+
+ApocalypseNow: "Apocalypse Now (1979), directed by Francis Ford Coppola, is set during the Vietnam War. It follows Captain Willard as he is sent on a mission to assassinate Colonel Kurtz, a decorated officer who has gone rogue.\n\nThe film delves into the psychological horrors of war, blurring the line between sanity and madness. Its surreal imagery and philosophical tone set it apart from traditional war narratives.\n\nApocalypse Now is hailed as one of the greatest films ever made, a haunting meditation on the darkness within humanity.",
+
+FullMetalJacket: "Full Metal Jacket (1987), directed by Stanley Kubrick, presents a raw look at the Vietnam War through the eyes of a group of U.S. Marines. The film is divided into two parts: brutal boot camp training and the chaos of combat.\n\nThemes of dehumanization, identity, and the psychological toll of war dominate the story. The infamous drill instructor scenes showcase Kubrick’s ability to reveal cruelty masked as discipline.\n\nToday, Full Metal Jacket stands as a defining anti-war film, with unforgettable performances and sharp social commentary.",
+
+Platoon: "Platoon (1986), directed by Oliver Stone, portrays the Vietnam War from the perspective of a young soldier, Chris Taylor. It focuses on the moral conflicts within his platoon, torn between two sergeants with opposing philosophies.\n\nThe film emphasizes the chaos, fear, and conflicting loyalties soldiers faced in Vietnam. Its gritty realism set it apart from earlier, more romanticized war films.\n\nPlatoon won four Academy Awards, including Best Picture, and remains a landmark in depicting the Vietnam War’s human cost.",
+
+Dunkirk: "Dunkirk (2017), directed by Christopher Nolan, tells the story of the evacuation of Allied troops from Dunkirk, France, during World War II. The film uses three perspectives—land, sea, and air—to create a nonlinear, tense experience.\n\nDialogue is minimal, with visuals and sound driving the narrative. Themes of survival, duty, and collective sacrifice dominate the story.\n\nDunkirk was praised for its technical brilliance and immersive storytelling, cementing its place as one of the most innovative war films of the 21st century.",
+
+HacksawRidge: "Hacksaw Ridge (2016), directed by Mel Gibson, is based on the true story of Desmond Doss, a pacifist combat medic who refused to carry a weapon but saved 75 men during the Battle of Okinawa.\n\nThe film highlights Doss’s faith, courage, and determination, contrasting the brutality of war with the strength of conviction. His resilience in the face of doubt inspires his fellow soldiers.\n\nHacksaw Ridge earned critical acclaim and multiple awards, reminding audiences of the extraordinary heroism found in nonviolence.",
+
+1917: "1917 (2019), directed by Sam Mendes, is set during World War I and follows two young British soldiers tasked with delivering a crucial message to prevent a deadly ambush.\n\nThe film is renowned for its one-shot technique, immersing viewers in the soldiers’ harrowing journey across enemy lines. Themes of brotherhood, duty, and survival dominate the narrative.\n\n1917 received widespread acclaim for its technical achievements and emotional depth, becoming a modern war classic.",
+
+LettersFromIwoJima: "Letters from Iwo Jima (2006), directed by Clint Eastwood, tells the story of the Battle of Iwo Jima from the Japanese perspective. It follows General Kuribayashi and his soldiers as they defend their island against American forces.\n\nThe film humanizes the Japanese side, focusing on honor, sacrifice, and the futility of war. Its narrative challenges stereotypes by showing the shared humanity of soldiers on both sides.\n\nThe film received critical acclaim worldwide and is considered one of the best World War II films ever made.",
+
+BlackHawkDown: "Black Hawk Down (2001), directed by Ridley Scott, dramatizes the 1993 Battle of Mogadishu, where U.S. soldiers faced a prolonged fight after a mission went wrong.\n\nThe movie emphasizes the chaos of modern warfare, with soldiers trapped in a hostile city while trying to survive. It showcases themes of camaraderie, sacrifice, and the harsh realities of combat.\n\nBlack Hawk Down is remembered for its intense realism and has become a benchmark for modern military action films.",
+
+TheThinRedLine: "The Thin Red Line (1998), directed by Terrence Malick, depicts the Battle of Guadalcanal during World War II. It focuses on the inner lives of soldiers and their relationship with nature amid the chaos of battle.\n\nUnlike traditional war films, it emphasizes philosophy and emotion over action. Soldiers are portrayed as fragile human beings caught in the machinery of war.\n\nThe Thin Red Line is regarded as a poetic masterpiece, offering a meditative alternative to the conventional war epic.",
+EnemyAtTheGates: "Enemy at the Gates (2001), directed by Jean-Jacques Annaud, is set during the Battle of Stalingrad in World War II. It tells the story of a duel between a Soviet sniper, Vasily Zaitsev, and a German marksman sent to eliminate him.\n\nThe film combines suspense, romance, and historical drama while showcasing the desperation of one of the war’s bloodiest battles. It illustrates how individual heroism can inspire an entire nation.\n\nEnemy at the Gates is known for its tense atmosphere and portrayal of urban warfare under extreme conditions.",
+
+ThePianist: "The Pianist (2002), directed by Roman Polanski, tells the true story of Władysław Szpilman, a Jewish pianist who survives the Holocaust in Warsaw.\n\nThe film emphasizes the brutality of the Nazi occupation, but also the resilience of the human spirit. Szpilman’s music becomes both his refuge and his means of survival in a collapsing world.\n\nThe Pianist won multiple Academy Awards and remains one of the most powerful depictions of personal survival in wartime.",
+
+SchindlersList: "Schindler’s List (1993), directed by Steven Spielberg, chronicles the efforts of Oskar Schindler, a German industrialist who saved over a thousand Jews during the Holocaust.\n\nShot in stark black and white, the film underscores the horrors of genocide while highlighting the capacity for compassion amid evil. It remains one of cinema’s most harrowing yet hopeful works.\n\nSchindler’s List is widely considered one of the greatest films ever made, a timeless reminder of moral courage in times of atrocity.",
+
+WeWereSoldiers: "We Were Soldiers (2002), directed by Randall Wallace, depicts the Battle of Ia Drang in Vietnam, where American troops faced overwhelming odds.\n\nThe film focuses on Colonel Hal Moore’s leadership and the bravery of soldiers under fire. It also emphasizes the impact of war on families waiting at home.\n\nWe Were Soldiers combines action with emotional resonance, paying tribute to the sacrifices made by soldiers and their loved ones.",
+
+TheBridgeOnTheRiverKwai: "The Bridge on the River Kwai (1957), directed by David Lean, tells the story of British POWs forced by the Japanese to build a bridge in Burma during World War II.\n\nThe film explores themes of pride, duty, and the futility of war. Its climax delivers a powerful critique of obsession and the destructive cycle of conflict.\n\nWinner of seven Academy Awards, The Bridge on the River Kwai remains a classic in war cinema history.",
+
+Patton: "Patton (1970), directed by Franklin J. Schaffner, is a biographical war film about General George S. Patton, one of the most controversial figures of World War II.\n\nThe film portrays his brilliance as a strategist, his volatile personality, and his clashes with fellow commanders. It shows the thin line between genius and recklessness in wartime leadership.\n\nPatton won seven Academy Awards, including Best Picture, and remains one of the definitive portrayals of military leadership.",
+
+Glory: "Glory (1989), directed by Edward Zwick, tells the story of the 54th Massachusetts Infantry Regiment, one of the first African-American units in the U.S. Civil War.\n\nThe film highlights the courage and struggles of Black soldiers fighting for freedom and equality, even while facing discrimination within the Union Army.\n\nGlory is celebrated for its performances, historical significance, and emotional impact, shining a light on an overlooked chapter of American history.",
+
+TheDeerHunter: "The Deer Hunter (1978), directed by Michael Cimino, follows a group of friends from a small American town before, during, and after their harrowing experiences in the Vietnam War.\n\nIt explores the psychological trauma inflicted by war and the bonds of friendship that struggle to survive under immense pressure.\n\nThe Deer Hunter won five Academy Awards, including Best Picture, and remains a haunting meditation on the long-term effects of combat.",
+
+ABridgeTooFar: "A Bridge Too Far (1977), directed by Richard Attenborough, dramatizes Operation Market Garden, a failed Allied campaign in World War II to capture key bridges in the Netherlands.\n\nThe film features an all-star cast and examines the overconfidence and miscommunication that led to disaster.\n\nA Bridge Too Far is remembered for its epic scale and its unflinching look at military miscalculation.",
+
+Midway: "Midway (2019), directed by Roland Emmerich, recounts the Battle of Midway, a turning point in the Pacific Theater of World War II.\n\nThe film emphasizes the bravery of pilots, intelligence officers, and sailors who shifted the balance of power against Japan.\n\nThough a modern blockbuster, Midway pays tribute to real-life heroism and sacrifice, blending action with historical respect.",
+
+ToraToraTora: "Tora! Tora! Tora! (1970), directed by Richard Fleischer and Kinji Fukasaku, depicts the events leading up to the Japanese attack on Pearl Harbor.\n\nThe film presents both the American and Japanese perspectives, offering a balanced view of the strategies and miscalculations involved.\n\nIt is praised for its historical accuracy and remains a key depiction of the Pearl Harbor attack in cinema.",
+
+PearlHarbor: "Pearl Harbor (2001), directed by Michael Bay, is a fictionalized account of the 1941 Japanese attack, blending romance with history.\n\nThough criticized for historical liberties, the film captures the scale of destruction and the human cost of the surprise assault.\n\nIt remains popular as a modern epic, with a strong focus on love, sacrifice, and patriotism during wartime.",
+
+Gallipoli: "Gallipoli (1981), directed by Peter Weir, focuses on two young Australian men who enlist in World War I and are sent to fight in the disastrous Gallipoli campaign.\n\nThe film emphasizes camaraderie, innocence lost, and the futility of poorly led campaigns.\n\nGallipoli is regarded as one of Australia’s greatest films, blending national identity with universal themes of sacrifice.",
+
+TheHurtLocker: "The Hurt Locker (2008), directed by Kathryn Bigelow, follows a bomb disposal team in the Iraq War as they confront life-or-death situations daily.\n\nIt explores addiction to adrenaline, the psychological toll of war, and the blurred lines between bravery and recklessness.\n\nThe Hurt Locker won six Academy Awards, including Best Picture, making Bigelow the first woman to win Best Director.",
+
+AmericanSniper: "American Sniper (2014), directed by Clint Eastwood, tells the true story of Chris Kyle, a U.S. Navy SEAL sniper with the most confirmed kills in American military history.\n\nThe film examines his skill, struggles with PTSD, and the impact of his service on his family.\n\nAmerican Sniper became a box office hit and sparked debate about the morality and costs of modern warfare.",
+
+LoneSurvivor: "Lone Survivor (2013), directed by Peter Berg, is based on the true story of Operation Red Wings, where a group of Navy SEALs were ambushed in Afghanistan.\n\nThe film emphasizes brotherhood, sacrifice, and resilience against overwhelming odds.\n\nLone Survivor is a modern war film that highlights the brutal realities of combat and the courage of those who endure it.",
+
+ZeroDarkThirty: "Zero Dark Thirty (2012), directed by Kathryn Bigelow, dramatizes the decade-long hunt for Osama bin Laden, culminating in the 2011 Navy SEAL raid.\n\nIt focuses on the relentless work of intelligence officers, particularly Maya, whose determination drove the mission forward.\n\nThe film sparked controversy but earned acclaim for its suspenseful storytelling and portrayal of modern counterterrorism.",
+
+Jarhead: "Jarhead (2005), directed by Sam Mendes, is based on the memoir of Anthony Swofford, a U.S. Marine sniper during the Gulf War.\n\nThe film explores boredom, frustration, and the psychological effects of waiting for combat that never comes.\n\nJarhead is unique among war films for its focus on the monotony and emotional toll of military life rather than large-scale battles.",
+
+Defiance: "Defiance (2008), directed by Edward Zwick, tells the true story of Jewish brothers who led a resistance movement against Nazi forces in Belarus during World War II.\n\nThe film emphasizes survival, leadership, and the fight to preserve community under persecution.\n\nDefiance highlights a lesser-known but inspiring story of resilience and resistance during the Holocaust.",
+
+ComeAndSee: "Come and See (1985), directed by Elem Klimov, is a Soviet war film set during the Nazi occupation of Belarus.\n\nIt follows a young boy who joins the resistance, only to witness unimaginable atrocities. The film is unrelentingly raw and harrowing.\n\nCome and See is widely considered one of the most powerful anti-war films ever made, unforgettable for its emotional intensity and stark realism.",
+ApocalypseNow: "Apocalypse Now (1979), directed by Francis Ford Coppola, follows Captain Benjamin Willard on a mission during the Vietnam War to find and assassinate Colonel Kurtz, a rogue officer who has gone mad.\n\nThe film explores the psychological effects of war, the brutality of combat, and the thin line between sanity and madness. It is filled with surreal and haunting imagery.\n\nApocalypse Now is considered one of the greatest films ever made, offering a nightmarish portrait of Vietnam and the darkness of human nature.",
+
+FullMetalJacket: "Full Metal Jacket (1987), directed by Stanley Kubrick, is divided into two parts: the harsh training of new Marine recruits and their experiences during the Vietnam War.\n\nIt portrays the dehumanizing process of military indoctrination, focusing on characters like Joker, Pyle, and their drill instructor, Gunnery Sergeant Hartman.\n\nThe film is iconic for its raw depiction of training and combat, showing the psychological cost of war and Kubrick’s sharp, unflinching style.",
+
+Platoon: "Platoon (1986), directed by Oliver Stone, is based on Stone’s own experiences in Vietnam. It follows Chris Taylor, a young soldier caught between two sergeants with opposing views.\n\nThe movie highlights the chaos, moral conflict, and human toll of the Vietnam War, depicting soldiers’ struggles with fear, morality, and survival.\n\nPlatoon won the Academy Award for Best Picture and is praised for its realistic and personal portrayal of combat in Vietnam.",
+
+BlackHawkDown: "Black Hawk Down (2001), directed by Ridley Scott, depicts the Battle of Mogadishu, where U.S. soldiers faced intense urban combat in Somalia.\n\nThe movie showcases the bravery and struggles of American troops trapped in hostile territory, emphasizing camaraderie and the chaos of modern warfare.\n\nIt remains a gripping war drama known for its realism, technical excellence, and raw portrayal of survival under fire.",
+
+1917: "1917 (2019), directed by Sam Mendes, follows two young British soldiers tasked with delivering a message to save hundreds of men during World War I.\n\nThe film is shot to look like one continuous take, immersing the audience in the urgency and danger of the mission. It highlights themes of sacrifice and determination.\n\n1917 was acclaimed for its technical innovation and emotional power, winning multiple Academy Awards and redefining the cinematic experience of war.",
+
+LettersFromIwoJima: "Letters from Iwo Jima (2006), directed by Clint Eastwood, tells the story of the Battle of Iwo Jima from the Japanese perspective.\n\nThrough letters, the soldiers’ humanity, fears, and struggles are revealed, focusing on General Kuribayashi and his men.\n\nThe film is praised for its emotional depth, unique perspective, and powerful reminder that soldiers on both sides of war share common humanity.",
+
+TheDeerHunter: "The Deer Hunter (1978), directed by Michael Cimino, examines the lives of a group of friends before, during, and after the Vietnam War.\n\nThe film is renowned for its harrowing Russian roulette scenes and its exploration of trauma, friendship, and the devastating impact of war on small-town America.\n\nIt won five Academy Awards, including Best Picture, and remains one of the most haunting portrayals of Vietnam’s psychological toll.",
+
+TheThinRedLine: "The Thin Red Line (1998), directed by Terrence Malick, portrays the Battle of Guadalcanal during World War II.\n\nThe film combines stunning visuals with philosophical reflections, exploring the inner thoughts of soldiers facing chaos and mortality.\n\nThough overshadowed by Saving Private Ryan in the same year, it is now regarded as a masterpiece of poetic war cinema.",
+
+EnemyAtTheGates: "Enemy at the Gates (2001) tells the story of the Battle of Stalingrad through the duel between Soviet sniper Vasily Zaitsev and German sniper Major König.\n\nIt highlights the brutality of urban warfare and the psychological duel between two skilled marksmen.\n\nThe film is praised for its tense sniper sequences and portrayal of the human cost of the Eastern Front.",
+
+Patton: "Patton (1970) is a biographical film about U.S. General George S. Patton, focusing on his controversial leadership during World War II.\n\nThe film showcases Patton’s brilliance as a commander but also his flaws, temper, and larger-than-life personality.\n\nIt won seven Academy Awards, including Best Picture, and George C. Scott’s performance as Patton is considered legendary.",
+
+ToraToraTora: "Tora! Tora! Tora! (1970) recounts the attack on Pearl Harbor from both American and Japanese perspectives.\n\nThe film balances historical accuracy with dramatic storytelling, showing the planning and execution of the surprise attack.\n\nIt is notable for its large-scale battle sequences and attention to detail, becoming a staple of war film history.",
+
+TheBridgeOnTheRiverKwai: "The Bridge on the River Kwai (1957), directed by David Lean, tells the story of British POWs forced to build a railway bridge for the Japanese in Burma.\n\nColonel Nicholson’s obsession with completing the bridge clashes with the Allied mission to destroy it, raising questions about pride and duty.\n\nThe film won seven Academy Awards and remains one of the greatest war epics ever made.",
+
+HacksawRidge: "Hacksaw Ridge (2016), directed by Mel Gibson, tells the true story of Desmond Doss, a conscientious objector who served as a medic during World War II without carrying a weapon.\n\nThe film depicts his courage in saving dozens of lives during the Battle of Okinawa, despite ridicule from fellow soldiers.\n\nIt was critically acclaimed and celebrated for highlighting faith, conviction, and heroism in war.",
+
+Dunkirk: "Dunkirk (2017), directed by Christopher Nolan, recounts the evacuation of Allied troops from Dunkirk, France, during World War II.\n\nThe film uses three timelines—land, sea, and air—to capture the intensity of the event, with minimal dialogue and maximum tension.\n\nDunkirk was praised for its realism, sound design, and immersive storytelling, winning three Academy Awards.",
+
+PathsOfGlory: "Paths of Glory (1957), directed by Stanley Kubrick, focuses on a French World War I officer defending three soldiers accused of cowardice.\n\nThe film critiques military hierarchy, injustice, and the futility of war, standing as one of Kubrick’s finest works.\n\nIt is regarded as a classic anti-war film with enduring influence.",
+
+FlagsOfOurFathers: "Flags of Our Fathers (2006), directed by Clint Eastwood, tells the story of the men who raised the flag on Iwo Jima.\n\nIt examines the difference between the reality of war and the image of heroism portrayed back home in America.\n\nThe film is powerful in its reflection on memory, sacrifice, and the cost of national symbols.",
+
+WeWereSoldiers: "We Were Soldiers (2002), starring Mel Gibson, depicts the Battle of Ia Drang, one of the first major battles of the Vietnam War.\n\nThe film focuses on Lt. Col. Hal Moore and his troops, highlighting brotherhood, courage, and loss.\n\nIt is praised for its authenticity and emotional storytelling, honoring the soldiers who fought.",
+
+ThePianist: "The Pianist (2002), directed by Roman Polanski, tells the true story of Władysław Szpilman, a Polish-Jewish pianist who survived the Holocaust.\n\nThe film portrays his struggles to endure in Nazi-occupied Warsaw and the impact of war on civilians.\n\nIt won three Academy Awards, including Best Director and Best Actor, and is regarded as one of the most powerful Holocaust films ever made.",
+
+ComeAndSee: "Come and See (1985), directed by Elem Klimov, is a Soviet film about a young boy experiencing the horrors of the Nazi occupation in Belarus.\n\nThe movie is known for its unflinching, surreal, and haunting imagery that captures the trauma of war through a child’s eyes.\n\nIt is considered one of the most devastating and unforgettable anti-war films ever made.",
+
+Downfall: "Downfall (2004) depicts the final days of Adolf Hitler in his Berlin bunker as the Third Reich collapses.\n\nThe film shows the desperation, fanaticism, and suffering of those trapped in the Nazi regime’s downfall.\n\nIt is acclaimed for its historical accuracy and Bruno Ganz’s chilling performance as Hitler.",
+
+LeonorWillNeverDie: "Leonor Will Never Die (2022) – A psychological comedy-drama by Martika Ramirez Escobar about a retired screenwriter who, after a coma, finds herself inside her unfinished screenplay.\n\nSheila Francisco stars as Leonor, whose real life and narrative life blur, giving the film a meta story about creation, regrets, and the magic of storytelling. The tone shifts between surreal, playful, and poignant moments as Leonor confronts parts of her past she never resolved.\n\nIt premiered at Sundance and became known for its originality, humor, and homage to classic Filipino action films, gaining critical acclaim for its inventiveness and emotional core." ,
+
+Balota: "Balota (2024) – A political thriller directed by Kip Oebanda, following Emmy, a teacher who becomes embroiled in election-day violence during a volatile local election.\n\nWhen violence erupts, Emmy must flee into the forest with a ballot box containing critical election results. The film explores power, democracy, and the cost of doing what’s right in a corrupt system.\n\nBalota premiered at Cinemalaya and was noted for its tense pacing, strong performance by Marian Rivera, and its timely commentary on political integrity and community resilience." ,
+
+GoyoAngBatangHeneral: "Goyo: Ang Batang Heneral (2018) – A historical biopic focused on the life of Gregorio ‘Goyo’ del Pilar during the Philippine–American War.\n\nPlayed by Paulo Avelino, Goyo navigates duties, pride, and the expectations of heroism in war. The film delves into the burden of legacy, youth in leadership, and the cost of ambition amidst upheaval.\n\nVisually striking, the film is renowned for its cinematography, powerful performances, and its exploration of how ideals and reality collide in wartime." ,
+
+HeneralLuna: "Heneral Luna (2015) – A historical war film by Jerrold Tarog that portrays Antonio Luna’s fierce resistance against colonizers and the internal conflicts of the Philippine revolutionary leadership.\n\nJohn Arcilla delivers a chilling performance as Luna, embodying both brilliance and ruthlessness, fighting not only external enemies but also the apathy and treachery within his own ranks. The film dramatizes battles with great detail and realism.\n\nIt has become a modern classic of Philippine cinema, praised for its storytelling, direction, and its unflinching portrayal of leadership, nationalism, and betrayal." ,
+
+OneMoreChance: "One More Chance (2007) – Romantic drama directed by Cathy Garcia-Molina about love, heartbreak, and the second chances we crave.\n\nJohn Lloyd Cruz plays Popoy and Bea Alonzo plays Basha, whose relationship is tested by distance, personal growth, and conflicting dreams. The emotional tension comes from the disparity between where they are and what they want, and the painful choices in holding on or letting go.\n\nThe film is still widely quoted for its dialogue and resonated deeply with audiences, especially in how it captures the real heartbreak of losing something you thought would last forever." ,
+
+AngPanday: "Ang Panday (1980) – An action-fantasy film starring Fernando Poe Jr., about a blacksmith named Flavio who forges a magical sword to battle evil forces led by the villain Lizardo.\n\nThe story combines folklore, heroism, fantasy elements, and moral lessons about sacrifice, courage, and fighting oppression. Flavio becomes a symbol of hope and resistance for people oppressed by tyranny.\n\nAng Panday is a beloved classic in Philippine cinema, inspiring remakes, sequels, and being part of the cultural fabric especially among fans of fantasy and folklore films." ,
+
+ThatThingCalledTadhana: "That Thing Called Tadhana (2014) – A romantic indie film directed by Antoinette Jadaone following two strangers reeling from heartbreak who meet by chance at an airport.\n\nStars Angelica Panganiban and JM De Guzman. They embark on a road-trip that becomes more than just physical travel—it’s their journey of introspection, love, and finding oneself amid pain and hope.\n\nThe film’s simple charm, dialogue, and relatability made it a favorite among Millennials, praised for its emotional honesty and for redefining Filipino romance with nuance." ,
 
     javascript: "JavaScript is a programming language for creating interactive web content.",
-    AnobaTalagaKayo: "friends lang😢😢😢😢😢😢😢",
-    cctc: "Consolatrix College of Toledo City: Consolatrix is a Latin term meaning Comforter or Consoler. Therefore Consolatrix College of Toledo City translates to Comforter College of Toledo City. This name reflects the institution's mission to be a source of comfort, support, and guidance for its students and the community it serves, embodying its Catholic values and commitment to academic excellence, according to its Facebook page. ",
-    bsit: "BSIT stands for Bachelor of Science in Information Technology, a four-year degree program focused on the application of computer hardware and software to solve problems and meet the needs of organizations. Graduates learn to plan, install, customize, operate, and maintain IT infrastructure and systems, preparing them for careers in various information technology fields. ",
-    augustinianRecoletos: "The Augustinian Recollects are a branch of the Augustinian Order, founded as a reform movement in the 16th century to emphasize a more austere life of community prayer and interiority, following the Rule of St. Augustine. Known for their pursuit of truth and service to the Church through parishes, schools, and missions, they are a Catholic religious order of friars and nuns who have professed vows of poverty, chastity, and obedience. The order has a significant history in the Philippines, with its first missionaries arriving in 1606. ",
-    howToPlayPatintero: "Patintero is a traditional Filipino game where players try to cross lines without being tagged. To start, divide players into two teams: taggers and runners. The runners take turns trying to cross the lines drawn on the ground while the taggers try to stop them. Stand on the lines and move strategically to avoid being tagged. Coordination and teamwork are key for both defending and running. Practice running quickly and observing the taggers’ movements to find the best time to cross.\n\nNext, improve your strategy by learning when to dash or wait, and communicate with your teammates. Taggers should learn to anticipate runners’ movements and block paths efficiently. Playing multiple rounds will help everyone understand the rules better and develop skills. Remember, the goal is to have fun while exercising and building teamwork.",
-
-howToPlaySipa: "Sipa is a Filipino game played by kicking a small object, usually a rattan or rubber ball, to keep it in the air. To begin, hold the sipa in your hand and practice lifting it gently with your foot. Focus on using the top of your foot to control the sipa, aiming to keep it balanced and airborne. Start with short kicks and gradually increase the height and distance as your skill improves.\n\nIn the second step, try counting the number of successful kicks in a row to track progress. You can also play with friends to add a competitive element and learn different techniques. Practicing daily enhances coordination, balance, and leg strength. Remember, patience is important, and repeated practice will make your kicks more precise and controlled.",
-
-howToPlayTumbangPreso: "Tumbang Preso is a traditional Filipino street game where one player guards a can while others try to knock it down with a slipper. To play, place an empty can in the center and mark a 'home base' around it. The player guarding the can stays beside it, trying to tag opponents. Other players take turns throwing their slippers to knock down the can while avoiding being tagged.\n\nThe next step is to develop strategies, like distracting the guard or timing your throw carefully. Players should also practice quick reflexes to retrieve their slippers without getting tagged. The game teaches accuracy, speed, and decision-making. By playing repeatedly, both the guard and throwers improve their skills while enjoying a fun, active game.",
-
-howToPlayLuksongBaka: "Luksong Baka is a Filipino jumping game where players take turns jumping over another player who is bent over. To start, designate one player as the 'baka' (cow) and the others as jumpers. The first jumper attempts to jump over the 'baka' without touching them. Each round, the 'baka' raises their height slightly, making the jump more challenging. Focus on timing, strength, and technique for a safe jump.\n\nNext, players rotate roles to ensure everyone has a turn. Practice proper landing techniques to prevent injuries. By playing repeatedly, jumpers improve leg strength, coordination, and confidence. The game encourages camaraderie, physical fitness, and fun in an outdoor setting.",
-
-howToPlayPatinteroTeamStrategy: "In Patintero, strategy is key to winning. First, discuss team roles: who will defend which line and who will focus on running. Players must communicate and observe opposing players’ movements carefully. Practice timing dashes and identifying gaps in the defense. Team coordination helps runners cross safely and taggers defend effectively.\n\nNext, implement different tactics each round, like alternating defenders or feinting runs to confuse opponents. Analyze what worked and what didn’t after each game to improve teamwork. The game develops critical thinking, quick reflexes, and cooperative skills, which are essential in both traditional games and modern sports.",
-
-howToLearnBasketball: "Basketball is a team sport where the objective is to score points by shooting a ball into the opponent's hoop. First, learn the basic dribbling techniques using both hands to move the ball around the court. Practice passing, shooting, and catching skills by starting with stationary exercises and then gradually moving while performing them. Understanding court positions and teamwork is also important for effective gameplay.\n\nNext, focus on defensive and offensive strategies. Practice man-to-man defense, rebounding, and fast breaks to improve overall gameplay. Play small scrimmage games with friends to apply the skills learned in real situations. Continuous practice and observing experienced players will help enhance technique, coordination, and strategic thinking in basketball.",
-
-howToLearnVolleyball: "Volleyball is a game where two teams try to score points by hitting a ball over a net. Start by learning basic techniques like underhand and overhand serving, passing, setting, and spiking. Practice proper footwork and hand positioning to improve accuracy and control. Begin with drills to develop consistency before moving into full games. Communication with teammates is key to anticipate plays and cover the court effectively.\n\nNext, focus on team strategies and rotations to maximize court coverage. Participate in practice games to apply techniques under pressure and improve reaction times. Learning how to read opponents’ moves and positioning yourself accordingly will make you a better player. Regular practice strengthens skills, teamwork, and physical conditioning necessary for volleyball.",
-
-howToLearnBadminton: "Badminton is a racquet sport played by either two or four players. Begin by learning the grip, basic footwork, and how to hit the shuttlecock correctly. Practice forehand and backhand strokes, aiming for accuracy and control. Drills like shadowing movements and hitting against a wall can improve technique. Focus on balance and agility to move quickly across the court.\n\nNext, work on serving and returning shots during rallies. Learn game strategies like placement, deception, and reading opponents’ movements. Play matches to apply your skills in real situations, which will improve timing, endurance, and strategic thinking. Regular practice builds coordination, reflexes, and overall physical fitness.",
-
-howToLearnSoccer: "Soccer is a team sport where players aim to score goals by kicking a ball into the opposing team’s net. Start by learning basic skills like dribbling, passing, shooting, and ball control. Practice these skills in isolation before combining them during small-sided games. Learn to move strategically on the field and maintain awareness of teammates and opponents.\n\nNext, develop tactical knowledge, including formations and positioning. Practice set pieces such as corner kicks and free kicks. Play in actual games to apply techniques under pressure, enhancing decision-making, speed, and stamina. Soccer promotes teamwork, cardiovascular fitness, and agility while providing fun and competition.",
-
-howToLearnTableTennis: "Table tennis is a fast-paced sport where players hit a small ball over a net on a table. Begin by learning the grip, basic strokes like forehand and backhand, and proper stance. Practice consistency by hitting the ball repeatedly against a wall or with a partner. Focus on hand-eye coordination, footwork, and timing to maintain rallies.\n\nNext, learn serving techniques and spin control to challenge opponents. Practice different types of shots such as smashes, loops, and pushes to increase versatility. Play matches to develop strategy, anticipation, and reflexes. Consistent practice improves focus, agility, and competitive skills in table tennis.",
-
     whatIsWeather: "Weather is the day-to-day state of the atmosphere in a particular place.",
-    whatIsWarmUp: "Warm-up is a set of exercises performed before the main workout to prepare the body and prevent injuries.",
-whatIsCoolDown: "Cool-down is a period of low-intensity activity after exercise to help the body recover and reduce muscle soreness.",
-whatIsCardio: "Cardio is any exercise that raises your heart rate and improves the efficiency of the cardiovascular system.",
-whatIsStrengthTraining: "Strength training is physical activity designed to improve muscle strength and endurance using weights or resistance.",
-whatIsFlexibility: "Flexibility is the ability of muscles and joints to move through their full range of motion.",
-whatIsAerobics: "Aerobics is a form of exercise that combines rhythmic movements with breathing techniques to improve cardiovascular fitness.",
-whatIsMuscularEndurance: "Muscular endurance is the ability of a muscle or group of muscles to sustain repeated contractions over time without getting tired.",
-whatIsBalance: "Balance is the ability to maintain the body's center of gravity while stationary or moving.",
-whatIsCoordination: "Coordination is the ability to use different parts of the body together smoothly and efficiently.",
-whatIsAgility: "Agility is the ability to move quickly and change direction efficiently while maintaining control.",
-whatIsBodyComposition: "Body composition refers to the proportion of fat, muscle, and other tissues in the body.",
-whatIsHydration: "Hydration is the process of providing the body with adequate fluids to maintain normal bodily functions.",
-whatIsEndorphins: "Endorphins are chemicals released in the brain during exercise that reduce pain and improve mood.",
-whatIsPlyometrics: "Plyometrics are exercises that involve rapid stretching and contracting of muscles to increase power.",
-whatIsAnaerobicExercise: "Anaerobic exercise is high-intensity activity performed in short bursts without relying on oxygen for energy.",
-whatIsPhysicalFitness: "Physical fitness is the ability to carry out daily tasks efficiently and maintain health and wellness.",
-whatIsSkillRelatedFitness: "Skill-related fitness includes agility, balance, coordination, power, reaction time, and speed.",
-whatIsHealthRelatedFitness: "Health-related fitness focuses on components like cardio endurance, muscular strength, flexibility, and body composition.",
-whatIsRehabilitationExercise: "Rehabilitation exercise is activity designed to help recover strength, flexibility, and mobility after an injury.",
-whatIsSportsmanship: "Sportsmanship is showing respect, fairness, and graciousness during sports and physical activities.",
-whatIsEndurance: "Endurance is the ability of the body to perform prolonged physical activity without fatigue.",
-whatIsResistanceTraining: "Resistance training involves exercises using resistance to improve muscle strength and tone.",
-whatIsCircuitTraining: "Circuit training is a form of workout where different exercises are performed in sequence with minimal rest.",
-whatIsIntervalTraining: "Interval training alternates periods of high-intensity exercise with periods of rest or low-intensity activity.",
-whatIsHeartRate: "Heart rate is the number of times the heart beats per minute, indicating cardiovascular activity level.",
-whatIsTargetHeartRate: "Target heart rate is the ideal range of heartbeats per minute to achieve maximum cardio benefits safely.",
-whatIsOvertraining: "Overtraining occurs when the body is pushed beyond its ability to recover, leading to fatigue or injury.",
-whatIsInjuryPrevention: "Injury prevention includes strategies and exercises to reduce the risk of harm during physical activity.",
-whatIsDynamicStretching: "Dynamic stretching involves moving parts of the body through a full range of motion to prepare muscles for exercise.",
-whatIsStaticStretching: "Static stretching involves holding a stretch in a position for a period to improve flexibility.",
-whatIsCircuit: "A circuit is a series of exercises performed one after another with minimal rest.",
-whatIsPersonalFitnessPlan: "A personal fitness plan is a customized exercise program designed to meet an individual’s health and fitness goals.",
-whatIsBodyMechanics: "Body mechanics is the way the body moves during activity to reduce strain and prevent injury.",
-whatIsWarmDown: "Warm-down is another term for cool-down, helping the body return to resting state after exercise.",
-whatIsMotivationInPE: "Motivation in PE is the drive or desire to engage consistently in physical activity.",
-whatIsEnduranceTraining: "Endurance training is exercise that improves stamina and the ability to sustain prolonged activity.",
-whatIsFunctionalFitness: "Functional fitness involves exercises that mimic everyday movements to improve overall body performance.",
-whatIsCoreStrength: "Core strength is the strength of muscles around the abdomen, lower back, and pelvis that support balance and posture.",
-whatIsFlexibilityTraining: "Flexibility training involves exercises that increase joint range of motion and muscle elasticity.",
-whatIsWarmUpRoutine: "A warm-up routine is a sequence of exercises designed to prepare the body for more intense activity.",
-whatIsPhysicalActivity: "Physical activity is any movement of the body that requires energy expenditure.",
-whatIsMuscleGroups: "Muscle groups are collections of muscles that work together to perform a specific movement.",
-whatIsAgilityDrill: "An agility drill is a training activity designed to improve quickness, balance, and coordination.",
-whatIsSpeedTraining: "Speed training involves exercises to improve how quickly the body can move over a short distance.",
-whatIsReactionTime: "Reaction time is the duration between the presentation of a stimulus and the initiation of a response.",
-whatIsTeamworkInPE: "Teamwork in PE is the ability to work effectively with others to achieve a common goal in sports or activities.",
-whatIsSportsInjury: "A sports injury is physical harm sustained during exercise, training, or competitive sports.",
-whatIsProperForm: "Proper form is the correct technique used during exercises to maximize benefits and prevent injuries.",
-whatIsWarmUpExercise: "Warm-up exercises are light activities performed before intense physical activity to prepare muscles and joints.",
-whatIsAerobicCapacity: "Aerobic capacity is the maximum amount of oxygen the body can use during prolonged exercise.",
-howToCookAdobo: "Chicken or pork adobo is a classic Filipino dish known for its savory, slightly tangy flavor. First, prepare the ingredients: meat, soy sauce, vinegar, garlic, bay leaves, and peppercorns. Marinate the meat in soy sauce, vinegar, and crushed garlic for at least 30 minutes to allow the flavors to infuse. While marinating, chop onions or potatoes if you want to add them to the dish. Next, heat a pan and sear the meat until lightly browned, which locks in flavor.\n\nThen, add the marinade, bay leaves, and peppercorns. Simmer over low heat until the meat is tender and the sauce is slightly reduced. Taste and adjust seasoning as needed with salt or additional soy sauce. Serve with steamed rice. Practicing this step-by-step helps you understand flavor balancing and cooking times, which is crucial in Filipino cuisine.",
-
-howToCookSpaghetti: "Spaghetti is a popular pasta dish with a tomato-based sauce. Begin by boiling water in a large pot and adding a pinch of salt. Cook the spaghetti noodles according to package instructions until al dente, then drain and set aside. While the pasta is cooking, prepare the sauce by sautéing garlic and onions in a pan with a little oil. Add ground meat or hotdogs, cook until browned, then pour in tomato sauce and season with salt, sugar, and pepper.\n\nSimmer the sauce for 10–15 minutes to allow flavors to meld. Combine the cooked spaghetti with the sauce and mix well. Optionally, sprinkle grated cheese on top before serving. Following these steps ensures even cooking and a flavorful, well-balanced dish, while teaching control over seasoning and timing.",
-
-howToCookPancitBihon: "Pancit Bihon is a Filipino noodle dish made with rice noodles, vegetables, and meat or seafood. First, soak the rice noodles in warm water until softened. Prepare vegetables like carrots, cabbage, and green beans, and cut the meat or seafood into small pieces. Heat oil in a pan and sauté garlic and onions until fragrant. Add the meat or seafood and cook thoroughly.\n\nNext, add the vegetables and stir-fry for a few minutes. Pour in soy sauce and a little water or broth, then add the softened noodles. Toss everything together until noodles are evenly coated and cooked. Adjust seasoning to taste with salt and pepper. Practicing this dish helps improve timing, multitasking, and combining flavors effectively.",
-
-howToCookSinigang: "Sinigang is a Filipino sour soup made with meat or seafood and tamarind for its signature tang. Start by preparing the meat or seafood and washing the vegetables such as kangkong, radish, and eggplant. In a pot, boil water and add the meat, cooking until tender. Skim off excess fat and impurities for a clear broth.\n\nOnce the meat is cooked, add the tamarind base or fresh tamarind for sourness. Add vegetables in stages, starting with those that take longer to cook. Season with fish sauce or salt to taste. Simmer until vegetables are just tender. This method teaches balance in flavors, patience in cooking, and how to manage different ingredient cooking times.",
-
-howToCookFriedRice: "Fried rice is a versatile dish perfect for using leftover rice. Begin by preparing ingredients like diced vegetables, meat, eggs, and garlic. Heat oil in a pan and sauté garlic until fragrant. Add meat or seafood and cook until done. Push ingredients to the side of the pan and scramble the eggs in the cleared space.\n\nAdd the rice to the pan and combine it with the other ingredients. Season with soy sauce, salt, and pepper to taste. Stir-fry on high heat to ensure even mixing and prevent clumping. Practicing fried rice helps with multitasking, timing, and developing an understanding of seasoning balance.",
-
-howToCookLasagna: "Lasagna is a layered Italian dish with pasta sheets, sauce, cheese, and sometimes meat. Start by preparing the meat sauce: sauté garlic and onions, add ground meat, then pour in tomato sauce and simmer. Prepare ricotta or cottage cheese mixture, seasoning lightly. Pre-cook lasagna sheets if necessary to prevent dryness.\n\nNext, layer the ingredients in a baking dish: sauce, noodles, cheese, and repeat until full. Top with mozzarella and parmesan cheese. Bake in a preheated oven until the cheese is melted and bubbly. Following these steps teaches layering techniques, baking times, and flavor combination for rich dishes.",
-
-howToCookOmelette: "Omelette is a quick and versatile egg dish. Begin by whisking eggs with a pinch of salt and pepper until smooth. Heat a non-stick pan with a little oil or butter. Pour the egg mixture into the pan, swirling it evenly. Let it cook over medium heat until the edges begin to set.\n\nAdd fillings like vegetables, cheese, or meat on one half of the omelette. Carefully fold the other half over the fillings and cook briefly until the center is fully set. This method helps learn control over heat, timing, and ingredient preparation for simple, quick meals.",
-
-howToCookPastaCarbonara: "Carbonara is an Italian pasta dish made with eggs, cheese, pancetta, and black pepper. Start by cooking pasta until al dente and reserving some pasta water. Cook pancetta or bacon in a pan until crisp. In a separate bowl, whisk eggs and grated cheese together.\n\nRemove the pan from heat, add the drained pasta, and quickly mix in the egg and cheese mixture, adding reserved pasta water as needed to create a creamy sauce. Season with black pepper. Practicing this teaches timing, heat control, and combining ingredients to avoid scrambled eggs.",
-
-howToCookChickenCurry: "Chicken curry is a flavorful dish with spices and coconut milk. Begin by chopping chicken into pieces and marinating it with salt, turmeric, and chili powder. Heat oil in a pan, sauté onions, garlic, and ginger, then add the marinated chicken and cook until lightly browned.\n\nAdd coconut milk and curry powder, simmering until the chicken is tender and the sauce thickens. Adjust seasoning to taste. Learning this method improves understanding of spices, simmering techniques, and balancing flavors.",
-
-howToCookPuto: "Puto is a Filipino steamed rice cake. Start by mixing rice flour, sugar, and baking powder in a bowl. Gradually add milk and eggs, stirring until smooth. Prepare small molds or cupcake liners and lightly grease them. Pour the batter into molds, filling about three-quarters full.\n\nSteam the batter for 15–20 minutes or until a toothpick inserted comes out clean. Optionally, top with cheese before steaming. This process teaches measuring, mixing, and steaming techniques crucial for Filipino desserts.",
-howToCookLechon: "Lechon is a Filipino roasted pig dish often served during celebrations. First, clean and prepare the pig by removing innards and washing thoroughly. Season the pig inside and out with a mixture of salt, pepper, garlic, and other spices. Stuff the cavity with lemongrass and aromatics for extra flavor.\n\nNext, skewer the pig on a large bamboo spit and roast it over charcoal, turning continuously to ensure even cooking. Baste the skin occasionally to make it crispy. Cooking lechon teaches patience, temperature control, and how to manage large cooking projects for gatherings.",
-
-howToCookHaloHalo: "Halo-halo is a Filipino dessert made with shaved ice, sweet beans, fruits, and milk. Begin by preparing ingredients: cook sweet beans, slice fruits, and prepare jellies. Assemble ingredients in a tall glass, layering them with shaved ice.\n\nPour evaporated or condensed milk over the top and add optional toppings like ice cream or purple yam. Mixing while eating ensures flavors combine. This teaches assembling layered desserts and balancing textures and flavors.",
-
-howToCookArrozCaldo: "Arroz Caldo is a Filipino rice porridge with chicken and ginger. Start by sautéing garlic, onions, and ginger in oil until fragrant. Add chicken pieces and cook lightly. Pour in rice and water or broth, stirring to prevent sticking.\n\nSimmer until rice is soft and the mixture thickens. Season with fish sauce or salt. Garnish with boiled eggs, fried garlic, and green onions. This teaches slow cooking, seasoning, and layering flavors.",
-
-howToCookBeefStew: "Beef stew is a hearty dish with vegetables and tender beef. First, cut beef into cubes and season with salt and pepper. Brown the meat in a pan with oil to seal in flavor. Sauté onions, garlic, and carrots, then combine with beef and broth.\n\nSimmer slowly until beef is tender. Add potatoes and peas in the final minutes. Adjust seasoning to taste. This teaches braising techniques and managing long cooking processes for tender results.",
-
-howToCookFishEscabeche: "Escabeche is a sweet and sour fish dish. Begin by cleaning and scaling fish. Coat the fish in flour and fry until golden brown. Prepare the sauce by sautéing garlic, onions, bell peppers, and carrots, then adding vinegar, sugar, and soy sauce.\n\nPour the sauce over the fried fish and let it simmer briefly. Serve warm. This teaches frying techniques, sauce balancing, and plating for presentation.",
-
-howToCookMenudo: "Menudo is a Filipino stew with pork, liver, and vegetables. Start by cutting pork and liver into small cubes. Sauté garlic and onions, then add pork and cook until lightly browned. Add liver and cook briefly.\n\nPour in tomato sauce, water, and seasonings. Add diced potatoes, carrots, and bell peppers, and simmer until meat is tender. This teaches timing, combining flavors, and managing multiple ingredients.",
-
-howToCookPancitCanton: "Pancit Canton is a Filipino stir-fried noodle dish. Begin by soaking noodles in warm water if necessary. Sauté garlic, onions, and your choice of meat or seafood. Add vegetables such as cabbage, carrots, and bell peppers.\n\nAdd noodles and soy sauce, tossing everything together until cooked evenly. Adjust seasoning as needed. This teaches stir-frying, timing for noodles and vegetables, and flavor balancing.",
-
-howToCookLecheFlan: "Leche Flan is a creamy Filipino custard dessert. First, caramelize sugar in a pan until golden, then pour it into molds. Whisk eggs, condensed milk, and evaporated milk until smooth.\n\nPour the mixture over the caramel and steam or bake in a water bath until set. Chill before serving. This teaches custard preparation, steaming techniques, and patience for delicate desserts.",
-
-howToCookChickenInasal: "Chicken Inasal is a grilled Filipino chicken dish with a distinct marinade. Begin by marinating chicken in vinegar, calamansi, garlic, lemongrass, and annatto oil for several hours. This infuses the meat with flavor.\n\nGrill the chicken over charcoal, basting occasionally with the marinade to keep it moist. Serve with garlic rice and dipping sauce. This teaches marination, grilling techniques, and achieving balanced flavors.",
-
-howToCookBistekTagalog: "Bistek Tagalog is a Filipino beef steak with soy sauce and calamansi. Start by slicing beef thinly and marinating it in soy sauce, calamansi juice, and garlic. Sauté onions until translucent.\n\nCook the beef in the marinade until tender, then add onions and simmer briefly. Serve with rice. This teaches marination, sautéing, and balancing sour and salty flavors.",
-
-howToCookLaing: "Laing is a Filipino dish made from dried taro leaves and coconut milk. Begin by soaking dried taro leaves and preparing coconut milk with garlic, onions, and shrimp paste. Add chili for spice if desired.\n\nSimmer taro leaves in coconut milk until tender, stirring to avoid sticking. Season to taste and serve. This teaches simmering, managing spices, and handling leafy ingredients safely.",
-
-howToCookKareKare: "Kare-Kare is a Filipino peanut stew with oxtail and vegetables. Start by boiling oxtail until tender. Roast or sauté peanut butter and rice flour to create the sauce. Prepare vegetables like eggplant, string beans, and banana blossoms.\n\nCombine meat, vegetables, and peanut sauce in a pot. Simmer until flavors meld. Serve with bagoong (fermented shrimp paste). This teaches slow-cooking, sauce preparation, and flavor layering.",
-
-howToCookDinuguan: "Dinuguan is a Filipino pork blood stew. Begin by cutting pork into cubes and cooking in oil until browned. Sauté garlic and onions separately. Slowly add pork blood and vinegar, stirring to prevent curdling.\n\nSimmer with seasonings until thickened. Serve with rice or puto. This teaches handling unique ingredients, simmering techniques, and seasoning adjustments.",
-
-howToCookChickenTinola: "Chicken Tinola is a Filipino ginger and papaya soup. Start by sautéing garlic, onions, and ginger. Add chicken pieces and cook lightly. Pour in water or broth and simmer until chicken is tender.\n\nAdd vegetables like green papaya and chili leaves. Season with fish sauce or salt. Serve hot. This teaches making clear broths, timing vegetables, and balancing flavors.",
-
-howToCookCaldereta: "Caldereta is a Filipino beef stew with tomato sauce and liver spread. Begin by browning beef cubes and sautéing garlic, onions, and bell peppers. Add tomato sauce, water, and seasonings.\n\nSimmer until beef is tender, then add liver spread, potatoes, and carrots. Cook until vegetables are soft. This teaches braising, integrating multiple flavors, and layering ingredients.",
-
-howToCookPinakbet: "Pinakbet is a Filipino vegetable dish with shrimp paste. Start by sautéing garlic, onions, and tomatoes. Add sliced vegetables such as eggplant, okra, and bitter melon. Pour in a little water and cover to steam slightly.\n\nAdd shrimp paste for seasoning and cook until vegetables are tender but not mushy. Serve warm. This teaches sautéing, steaming vegetables, and balancing strong flavors.",
-
-howToCookBibingka: "Bibingka is a Filipino rice cake traditionally baked in clay pots. Start by mixing rice flour, coconut milk, sugar, and eggs into a smooth batter. Line a pan with banana leaves.\n\nPour the batter into the pan, top with cheese or salted egg, and bake until cooked through. This teaches batter preparation, baking techniques, and presentation.",
-
-howToCookChamporado: "Champorado is a sweet Filipino chocolate rice porridge. Begin by cooking sticky rice in water until soft. Add cocoa powder and sugar, stirring until dissolved. Simmer until thickened.\n\nOptionally, serve with milk or dried fish on the side. This teaches porridge consistency, flavor balancing, and simple dessert preparation.",
-
-howToCookSinigangNaHipon: "Sinigang na Hipon is a sour shrimp soup. Start by cleaning shrimp and preparing vegetables such as radish, eggplant, and water spinach. Boil water and add tamarind base or fresh tamarind for sourness.\n\nAdd shrimp and vegetables in stages, cooking until shrimp is pink and vegetables are tender. Season with fish sauce and serve hot. This teaches sequencing ingredients and managing seafood cooking times.",
-
-howToCookUkoy: "Ukoy is a Filipino shrimp fritter. Begin by peeling shrimp and mixing with shredded vegetables like sweet potato or squash. Make a batter with flour, water, and seasoning. Dip shrimp and vegetable mix in batter.\n\nDeep-fry until golden and crispy. Drain excess oil and serve with vinegar dip. This teaches batter preparation, frying techniques, and timing for crispiness.",
-
-howToCookPinaputokNaTilapia: "Pinaputok na Tilapia is a grilled stuffed fish dish. Begin by cleaning tilapia and making slits on both sides. Stuff with garlic, tomatoes, and herbs. Season with salt and pepper.\n\nWrap in banana leaves and grill over charcoal until cooked through. Serve hot. This teaches marination, stuffing, and grilling techniques.",
-
-howToCookBukoPandan: "Buko Pandan is a Filipino dessert with young coconut and pandan-flavored gelatin. Prepare pandan gelatin and cut into cubes. Mix with shredded young coconut and sweetened cream or condensed milk.\n\nChill before serving. This teaches dessert layering, gelatin preparation, and balancing sweetness with freshness.",
-
-howToCookMenudoWithLiver: "Menudo with liver is a rich Filipino stew. Begin by cutting pork and liver into cubes. Sauté garlic and onions, then cook pork until browned. Add liver briefly to avoid overcooking.\n\nAdd tomato sauce, water, and diced vegetables. Simmer until tender and flavors blend. This teaches sequencing ingredients, timing for different meats, and stew preparation.",
-
-howToCookChickenAfritada: "Chicken Afritada is a tomato-based Filipino stew. Begin by sautéing garlic, onions, and bell peppers. Add chicken pieces and brown slightly. Pour in tomato sauce and water or broth.\n\nAdd potatoes, carrots, and peas, simmering until chicken is tender and sauce thickened. This teaches layering flavors, cooking meat and vegetables simultaneously, and stew techniques.",
-howToCookChickenAdobo: "Chicken Adobo is a classic Filipino dish with savory and slightly tangy flavor. Start by marinating chicken in soy sauce, vinegar, garlic, and bay leaves for at least 30 minutes. This allows the flavors to infuse the meat thoroughly.\n\nNext, heat oil in a pan and sear the chicken until lightly browned. Pour in the marinade and simmer over low heat until the chicken is tender and the sauce thickens. Serve with rice. This teaches marination, simmering techniques, and balancing flavors.",
-
-howToCookPorkLechonKawali: "Lechon Kawali is a crispy deep-fried pork belly dish. Begin by boiling pork belly with garlic, bay leaves, and salt until tender. Drain and pat dry to remove excess moisture.\n\nHeat oil in a deep pan and fry the pork until golden brown and crispy. Slice and serve with vinegar dipping sauce. This teaches boiling, frying, and achieving crispy texture without burning.",
-
-howToCookChickenInasal: "Chicken Inasal is a grilled Filipino chicken dish with a distinct marinade. Start by marinating chicken with vinegar, calamansi, garlic, lemongrass, and annatto oil for several hours. This ensures the meat absorbs flavors.\n\nGrill the chicken over charcoal, basting occasionally with the marinade to maintain juiciness. Serve with garlic rice and dipping sauce. This teaches marination, grilling, and flavor balancing.",
-
-howToCookBicolExpress: "Bicol Express is a spicy Filipino dish with pork and coconut milk. Begin by sautéing garlic, onions, and ginger, then add pork slices and cook until browned. Add chili peppers according to spice preference.\n\nPour in coconut milk and simmer until the pork is tender and the sauce thickens. Adjust seasoning with fish sauce or salt. This teaches controlling heat, combining spices, and simmering techniques.",
-
-howToCookChickenAfritada: "Chicken Afritada is a tomato-based stew with chicken and vegetables. Start by sautéing garlic, onions, and bell peppers. Brown chicken pieces lightly before adding tomato sauce and water or broth.\n\nAdd potatoes, carrots, and peas, simmering until chicken is cooked and sauce thickened. Adjust seasoning as needed. This teaches layering flavors, cooking meat and vegetables together, and stew preparation.",
-
-howToCookPancitBihon: "Pancit Bihon is a stir-fried rice noodle dish. Begin by soaking rice noodles in warm water until softened. Sauté garlic, onions, and meat or shrimp, then add vegetables such as cabbage and carrots.\n\nAdd noodles and toss everything together with soy sauce until cooked evenly. This teaches stir-frying, noodle cooking, and flavor integration.",
-
-howToCookPancitCanton: "Pancit Canton is a Filipino stir-fried egg noodle dish. Start by sautéing garlic, onions, and meat or seafood. Add vegetables such as bell peppers and cabbage, then stir in egg noodles.\n\nSeason with soy sauce and oyster sauce, tossing until ingredients are fully cooked. Adjust taste with salt and pepper. This teaches stir-frying, seasoning, and balancing flavors.",
-
-howToCookLumpiangShanghai: "Lumpiang Shanghai is a Filipino spring roll with ground pork. Begin by mixing ground pork with chopped onions, carrots, garlic, and seasonings. Wrap small portions in spring roll wrappers and seal tightly.\n\nDeep-fry until golden brown and crispy. Serve with sweet and sour sauce. This teaches mixing fillings, rolling techniques, and frying skills.",
-
-howToCookHaloHalo: "Halo-Halo is a Filipino dessert with shaved ice, sweet beans, fruits, and milk. Prepare ingredients like cooked beans, jelly cubes, and fruits. Layer them in a tall glass with shaved ice.\n\nPour condensed or evaporated milk over the top and add toppings like ice cream or leche flan. Mixing while eating ensures flavor balance. This teaches assembling layered desserts and balancing textures.",
-
-howToCookBibingka: "Bibingka is a Filipino steamed or baked rice cake. Mix rice flour, coconut milk, sugar, and eggs into a smooth batter. Line a pan with banana leaves and pour in the batter.\n\nTop with cheese or salted egg and bake or steam until cooked through. This teaches batter preparation, steaming/baking, and dessert presentation.",
-
-howToCookBukoPandan: "Buko Pandan is a dessert with young coconut and pandan jelly. Prepare pandan jelly cubes and shredded young coconut. Mix with sweetened cream or condensed milk.\n\nChill before serving. This teaches assembling layered desserts, flavor pairing, and using gelatin-based ingredients.",
-
-howToCookChamporado: "Champorado is a chocolate rice porridge. Cook sticky rice in water until soft. Add cocoa powder and sugar, stirring until dissolved and thickened.\n\nServe warm, optionally with milk or dried fish. This teaches porridge consistency, sweetening, and flavor pairing.",
-
-howToCookUkoy: "Ukoy is a Filipino shrimp fritter. Peel shrimp and mix with shredded vegetables like sweet potato or squash. Prepare a light batter with flour, water, and seasoning.\n\nDip shrimp-vegetable mixture in batter and deep-fry until golden brown. Serve with vinegar dip. This teaches batter preparation, frying, and timing for crispiness.",
-
-howToCookLaing: "Laing is made from dried taro leaves cooked in coconut milk. Soak dried taro leaves, then sauté garlic, onions, and shrimp paste in coconut milk. Add chili if desired.\n\nSimmer taro leaves in the coconut milk mixture until tender, stirring occasionally. Adjust seasoning and serve. This teaches simmering, handling leafy ingredients, and spice control.",
-
-howToCookKareKare: "Kare-Kare is a Filipino peanut stew with oxtail or tripe. Boil meat until tender. Prepare peanut sauce using roasted peanuts or peanut butter mixed with stock.\n\nCombine meat, vegetables, and peanut sauce and simmer until flavors meld. Serve with bagoong (fermented shrimp paste). This teaches slow-cooking, sauce preparation, and flavor layering.",
-
-howToCookDinuguan: "Dinuguan is a pork blood stew. Sauté pork cubes until lightly browned. Add garlic, onions, and slowly incorporate pork blood with vinegar.\n\nSimmer until thickened and season to taste. Serve with puto or rice. This teaches handling unique ingredients, simmering, and seasoning adjustments.",
-
-howToCookSinigangNaHipon: "Sinigang na Hipon is a sour shrimp soup. Clean shrimp and prepare vegetables like radish, eggplant, and kangkong. Boil water and add tamarind base or fresh tamarind.\n\nAdd shrimp and vegetables in stages. Simmer until shrimp is pink and vegetables tender. Adjust seasoning with fish sauce. This teaches sequencing ingredients and managing seafood cooking times.",
-
-howToCookPinaputokNaTilapia: "Pinaputok na Tilapia is stuffed grilled fish. Clean tilapia and make slits for stuffing. Stuff with garlic, tomatoes, and herbs. Season with salt and pepper.\n\nWrap in banana leaves and grill until cooked through. Serve hot. This teaches stuffing, marination, and grilling techniques.",
-
-howToCookBeefStew: "Beef stew is a hearty dish with vegetables. Cut beef into cubes and brown in oil. Sauté garlic, onions, and carrots, then add beef and broth.\n\nSimmer until beef is tender. Add potatoes and peas near the end. Season to taste. This teaches braising, timing vegetables, and stew preparation.",
-
-howToCookFishEscabeche: "Escabeche is a sweet and sour fried fish dish. Clean and flour fish, then fry until golden. Prepare sauce with garlic, onions, bell peppers, vinegar, sugar, and soy sauce.\n\nPour sauce over fried fish and simmer briefly. Serve warm. This teaches frying, sauce balancing, and plating for presentation.",
-
-howToCookMenudo: "Menudo is a Filipino stew with pork, liver, and vegetables. Cut pork and liver into cubes. Sauté garlic and onions, add pork, then liver briefly.\n\nAdd tomato sauce, water, and vegetables like potatoes and carrots. Simmer until tender. This teaches timing, ingredient sequencing, and stew preparation.",
-
-howToCookChickenTinola: "Chicken Tinola is a ginger and papaya soup. Sauté garlic, onions, and ginger. Add chicken and simmer until tender. Add water as needed.\n\nAdd vegetables like green papaya and chili leaves. Season with fish sauce or salt. Serve hot. This teaches making clear broths, timing vegetables, and balancing flavors.",
-
-howToCookCaldereta: "Caldereta is a beef stew with tomato sauce and liver spread. Brown beef cubes and sauté garlic, onions, and bell peppers. Add tomato sauce, water, and seasonings.\n\nSimmer until beef is tender. Add liver spread, potatoes, and carrots, cooking until vegetables are soft. This teaches braising, integrating flavors, and layering ingredients.",
-
     whatIsClimate: "Climate is the average weather conditions of a region over a long period.",
     addition: "Addition is the process of combining two or more numbers to get a total. It uses the plus (+) symbol. For example, 3 + 2 = 5.",
   subtraction: "Subtraction means taking one number away from another. It uses the minus (-) symbol. For example, 5 - 2 = 3.",
@@ -1535,14 +1798,450 @@ howToCookCaldereta: "Caldereta is a beef stew with tomato sauce and liver spread
   howToCheckConnectivity: "Step 1: Open Command Prompt or terminal. Step 2: Type 'ping 8.8.8.8' to test Google’s DNS server. Step 3: If replies are shown, your internet is working. Step 4: If no reply, check your router and modem connections. Step 5: Restart the device or call your ISP if the issue persists.",
 
   howToSetupFTP: "Step 1: Install an FTP server software like FileZilla Server. Step 2: Configure a username and password for access. Step 3: Set a folder directory for sharing files. Step 4: Give users the server IP and login details. Step 5: Clients can connect using FileZilla Client or command-line FTP.",
-  
-    lincoln:
-      "Abraham Lincoln was the 16th President of the United States. He abolished slavery and led the country during the Civil War. He is honored as one of America's greatest leaders.",
+  DieHard: "Die Hard (1988), directed by John McTiernan, follows NYPD officer John McClane who finds himself trapped in a Los Angeles skyscraper during a terrorist takeover on Christmas Eve.\n\nThe film balances suspense, action, and humor, portraying McClane as a relatable everyman who must outsmart ruthless criminals.\n\nIt redefined action cinema, became a cultural touchstone, and launched a franchise that remains iconic decades later.",
+
+Terminator2JudgmentDay: "Terminator 2: Judgment Day (1991), directed by James Cameron, continues the saga of man versus machine as the T-800 protects young John Connor from a new liquid-metal Terminator.\n\nThe movie explores fate, humanity, and the terrifying potential of artificial intelligence through groundbreaking special effects and character growth.\n\nIt is hailed as one of the greatest sequels and action films ever made, pushing visual effects to new heights and solidifying Arnold Schwarzenegger's status as a superstar.",
+
+MadMaxFuryRoad: "Mad Max: Fury Road (2015), directed by George Miller, follows Max Rockatansky and Furiosa as they battle across a desert wasteland in a high-octane chase for freedom.\n\nThe film is nearly non-stop action, blending practical stunts with themes of survival, redemption, and rebellion against tyranny.\n\nIt was praised for its feminist themes, stunning cinematography, and redefined what modern action filmmaking could achieve, winning six Academy Awards.",
+
+JohnWick: "John Wick (2014), directed by Chad Stahelski, introduces a retired hitman seeking vengeance after gangsters kill his dog, a final gift from his late wife.\n\nThe film blends sleek choreography, stylish gun-fu, and an underworld of assassins governed by its own rules, redefining action aesthetics.\n\nIt revitalized Keanu Reeves' career and spawned a franchise that reshaped modern action cinema with its balletic violence and lore.",
+
+TheMatrix: "The Matrix (1999), directed by the Wachowskis, follows hacker Neo as he discovers the world is a simulated reality controlled by machines.\n\nBlending philosophy, martial arts, and revolutionary special effects, the film questions reality, control, and free will.\n\nIt transformed action filmmaking with bullet time, introduced iconic visuals, and became one of the most influential films of its era.",
+
+Gladiator: "Gladiator (2000), directed by Ridley Scott, follows Roman general Maximus who seeks vengeance after being betrayed and forced into slavery.\n\nThe film explores themes of honor, revenge, and the corrupting influence of power, anchored by Russell Crowe’s powerful performance.\n\nIt reignited interest in historical epics, winning Best Picture and leaving a lasting cultural mark with its iconic line, 'Are you not entertained?'",
+
+TheDarkKnight: "The Dark Knight (2008), directed by Christopher Nolan, sees Batman face his greatest test as the Joker plunges Gotham into chaos.\n\nIt’s not just an action film but a study of morality, chaos, and heroism, with Heath Ledger’s Joker delivering a legendary performance.\n\nIt redefined comic book movies, influencing the entire superhero genre and elevating action cinema into prestige filmmaking.",
+
+LethalWeapon: "Lethal Weapon (1987), directed by Richard Donner, pairs a reckless cop with a seasoned veteran as they uncover a deadly drug ring.\n\nThe chemistry between Mel Gibson and Danny Glover, mixing humor and intensity, redefined the buddy-cop genre.\n\nIt spawned sequels, countless imitators, and remains a staple of '80s and '90s action cinema.",
+
+Speed: "Speed (1994), directed by Jan de Bont, follows a cop who must stop a bus rigged to explode if it drops below 50 mph.\n\nThe film keeps adrenaline high with relentless tension, sharp pacing, and Keanu Reeves and Sandra Bullock’s breakout performances.\n\nIt became a massive hit, setting the standard for high-concept action thrillers.",
+
+RamboFirstBlood: "First Blood (1982), directed by Ted Kotcheff, introduces John Rambo, a Vietnam veteran mistreated by authorities.\n\nMore character-driven than its sequels, it deals with trauma, alienation, and the struggles of war veterans.\n\nIt launched an action icon and franchise, shaping the '80s action hero archetype.",
+Taken: "Taken (2008), directed by Pierre Morel, follows retired CIA operative Bryan Mills as he hunts down his daughter's kidnappers in Paris.\n\nWith its simple plot and Liam Neeson’s intense performance, the film became famous for its raw action and iconic 'particular set of skills' speech.\n\nIt reinvented Neeson as an unlikely action star and spawned a franchise, influencing countless revenge-thrillers.",
+
+Commando: "Commando (1985), starring Arnold Schwarzenegger, follows a retired special forces soldier rescuing his kidnapped daughter.\n\nThe film is unapologetically over-the-top, filled with explosive set pieces and Schwarzenegger’s one-liners.\n\nIt cemented Arnold as an '80s action icon and became a cult favorite for its mix of brutality and camp.",
+
+TheRaidRedemption: "The Raid: Redemption (2011), directed by Gareth Evans, showcases an elite SWAT team trapped in a Jakarta high-rise run by a crime lord.\n\nFamous for its relentless martial arts choreography and claustrophobic tension, the movie turned Iko Uwais into an international star.\n\nIt’s considered one of the greatest martial arts action films ever, inspiring Hollywood’s fight choreography for years.",
+
+FaceOff: "Face/Off (1997), directed by John Woo, features an FBI agent and terrorist who literally swap faces.\n\nJohn Travolta and Nicolas Cage deliver wild performances, blending operatic gunfights with themes of identity and obsession.\n\nIt remains one of Woo’s best Hollywood works, admired for its insane premise and stylish action.",
+
+PointBreak: "Point Break (1991), directed by Kathryn Bigelow, follows an FBI agent infiltrating a gang of surfer-bank robbers.\n\nThe film mixes crime drama, extreme sports, and deep bonds between hunter and hunted, with Keanu Reeves and Patrick Swayze’s electric chemistry.\n\nIt has since become a cult classic, inspiring remakes and influencing adrenaline-driven action cinema.",
+
+Predator: "Predator (1987), directed by John McTiernan, pits a group of commandos against an alien hunter in the jungle.\n\nBlending sci-fi and action, it highlights themes of survival and primal fear while showcasing Arnold Schwarzenegger in peak form.\n\nThe film’s creature design and tense atmosphere made it a classic, spawning sequels and crossovers.",
+
+CasinoRoyale: "Casino Royale (2006), directed by Martin Campbell, rebooted James Bond with Daniel Craig in a grittier, more realistic style.\n\nThe film focuses on Bond’s early career, his vulnerabilities, and his doomed romance with Vesper Lynd.\n\nIt revitalized the franchise, mixing brutal action with emotional depth, making Bond relevant for a new generation.",
+
+BadBoys: "Bad Boys (1995), directed by Michael Bay, pairs Will Smith and Martin Lawrence as Miami detectives uncovering a drug ring.\n\nThe film mixes stylish car chases, explosive gunfights, and comedic banter, establishing Bay’s signature style.\n\nIt launched Smith into movie stardom and became a successful buddy-cop franchise.",
+
+EnterTheDragon: "Enter the Dragon (1973), directed by Robert Clouse, stars Bruce Lee infiltrating a martial arts tournament to expose a crime lord.\n\nThe movie blends martial arts mastery with espionage elements, showcasing Lee’s charisma and philosophy.\n\nIt was Lee’s final completed film and remains one of the most influential martial arts action movies of all time.",
+
+TheRock: "The Rock (1996), directed by Michael Bay, follows a rogue group of Marines threatening San Francisco with chemical weapons.\n\nFeaturing Sean Connery, Nicolas Cage, and high-octane action, the movie mixes military tension with Hollywood spectacle.\n\nIt’s widely regarded as one of Bay’s best films and a '90s action staple.",
+DieHard2: "Die Hard 2 (1990), directed by Renny Harlin, brings John McClane back as terrorists seize an airport on Christmas Eve.\n\nThough similar to the first film, it expands the scope with larger set pieces and higher stakes.\n\nIt remains a fan favorite for its nonstop action and Bruce Willis’ relentless performance.",
+
+DieHardWithAVengeance: "Die Hard with a Vengeance (1995) teams McClane with Zeus Carver (Samuel L. Jackson) as they solve riddles and stop a mad bomber in New York.\n\nThe chemistry between Willis and Jackson reinvigorated the franchise.\n\nIt balances clever puzzles with intense chases, keeping the Die Hard spirit alive.",
+
+LiveFreeOrDieHard: "Live Free or Die Hard (2007) updates the formula with cyber-terrorism as McClane takes on hackers threatening the U.S. infrastructure.\n\nDespite criticism for toned-down violence, it delivers big stunts and Bruce Willis’ trademark grit.\n\nIt introduced McClane to a new generation while embracing modern tech threats.",
+
+MadMax2: "Mad Max 2: The Road Warrior (1981) takes Max into a post-apocalyptic desert where he helps defend a fuel-rich colony from marauders.\n\nThe film is iconic for its brutal car chases, practical stunts, and dystopian visuals.\n\nIt redefined action cinema and solidified George Miller’s reputation as a master of the genre.",
+
+MadMaxBeyondThunderdome: "Mad Max Beyond Thunderdome (1985) expands the Mad Max world, introducing Bartertown and the memorable 'Thunderdome' battles.\n\nThough less intense than its predecessor, it added mythic storytelling and Tina Turner’s powerful role.\n\nIt further established Max as a reluctant hero navigating chaos.",
+
+Speed: "Speed (1994), directed by Jan de Bont, stars Keanu Reeves and Sandra Bullock in a thriller about a bus rigged to explode if it drops below 50 mph.\n\nThe film keeps audiences on edge with relentless tension and clever setups.\n\nIt became a '90s action classic and cemented Reeves and Bullock as stars.",
+
+TrueLies: "True Lies (1994), directed by James Cameron, stars Arnold Schwarzenegger as a secret agent whose double life collides with his marriage.\n\nThe film mixes explosive action with comedy, particularly the dynamic between Arnold and Jamie Lee Curtis.\n\nIt remains one of Cameron’s most entertaining blockbusters.",
+
+LethalWeapon: "Lethal Weapon (1987), directed by Richard Donner, introduced the mismatched cop duo of Mel Gibson and Danny Glover.\n\nIts mix of action, comedy, and buddy-cop chemistry set the template for countless imitators.\n\nIt launched a successful franchise and remains a gold standard for buddy action films.",
+
+LethalWeapon2: "Lethal Weapon 2 (1989) brings Riggs and Murtaugh against corrupt South African diplomats.\n\nIt balances humor, explosive stunts, and personal stakes, while introducing fan-favorite character Leo Getz.\n\nThe sequel further solidified the franchise’s reputation.",
+
+LethalWeapon3: "Lethal Weapon 3 (1992) explores aging cops and dangerous arms dealers.\n\nIt adds strong female character Lorna Cole (Rene Russo), who matches Riggs in combat.\n\nThe film delivers humor and spectacle while deepening character arcs.",
+
+LethalWeapon4: "Lethal Weapon 4 (1998) reunites the cast against ruthless Chinese gangsters.\n\nThe film showcases Jet Li in his Hollywood debut, whose martial arts impressed audiences.\n\nIt closed the series with humor, family themes, and explosive action.",
+
+ConAir: "Con Air (1997), starring Nicolas Cage, follows a group of dangerous convicts who hijack a prison plane.\n\nThe film is over-the-top with colorful villains, massive stunts, and Cage’s southern-hero persona.\n\nIt’s remembered as one of the most gloriously cheesy '90s action flicks.",
+
+DemolitionMan: "Demolition Man (1993) pairs Sylvester Stallone with Wesley Snipes in a futuristic society where crime is nearly eliminated.\n\nTheir clash brings chaos to a sanitized world, mixing satire with action spectacle.\n\nIt has since become a cult classic for its humor, action, and social commentary.",
+
+Cliffhanger: "Cliffhanger (1993), starring Sylvester Stallone, features mountain-climbing rescues against terrorists in the Rockies.\n\nThe movie is filled with daring stunts, breathtaking scenery, and physical intensity.\n\nIt was a box office success and showcased Stallone’s action versatility.",
+
+FirstBlood: "First Blood (1982) introduces John Rambo, a Vietnam veteran mistreated by small-town authorities.\n\nUnlike later sequels, it is a mix of action and psychological drama, exploring trauma and alienation.\n\nIt spawned a legendary action series, with Rambo becoming a cultural icon.",
+
+RamboFirstBloodPart2: "Rambo: First Blood Part II (1985) takes Rambo back to Vietnam on a rescue mission.\n\nIt shifts the tone to pure explosive action, with iconic bow-and-arrow sequences and massive battles.\n\nThough criticized for its politics, it became one of the biggest hits of the '80s.",
+
+Rambo3: "Rambo III (1988) sees Rambo traveling to Afghanistan to rescue his mentor from Soviet forces.\n\nThe film amps up the action with larger-than-life battles and massive explosions.\n\nIt was once the most expensive film ever made and remains a hallmark of '80s spectacle.",
+
+Rambo2008: "Rambo (2008), directed by Sylvester Stallone, portrays an older, brutal version of the character aiding missionaries in Burma.\n\nThe film is graphically violent, emphasizing the horrors of war.\n\nIt was praised for its rawness and bringing Rambo back to his darker roots.",
+
+RamboLastBlood: "Rambo: Last Blood (2019) brings John Rambo into a final, personal battle against a Mexican cartel.\n\nIt blends action with themes of aging, loss, and revenge.\n\nThough divisive, it closed out the saga with brutal intensity.",
+
+Expendables: "The Expendables (2010) unites action legends like Stallone, Statham, and Lundgren for a mercenary adventure.\n\nIt celebrates '80s-style mayhem with modern spectacle.\n\nIts nostalgic cast and big explosions made it a hit among action fans.",
+
+Expendables2: "The Expendables 2 (2012) ups the ante with more stars, including Chuck Norris and Jean-Claude Van Damme as the villain.\n\nIt doubles down on self-aware humor and over-the-top combat.\n\nMany consider it the best of the series for its fun factor.",
+
+Expendables3: "The Expendables 3 (2014) adds younger recruits alongside the veteran action stars.\n\nThough criticized for a PG-13 rating, it still delivers large-scale battles and camaraderie.\n\nIt remains a guilty pleasure for franchise fans.",
+
+TheTransporter: "The Transporter (2002), starring Jason Statham, follows a professional driver who breaks his own rules when he discovers his cargo is human trafficking.\n\nThe film mixes martial arts, car stunts, and sleek European settings.\n\nIt launched Statham’s career as an international action star.",
+
+Transporter2: "Transporter 2 (2005) moves the action to Miami, with Frank Martin protecting a kidnapped boy.\n\nIt amps up the stunts, featuring outrageous sequences like a car flipping mid-air to remove a bomb.\n\nThough less grounded, it remains entertaining for fans of wild action.",
+
+Transporter3: "Transporter 3 (2008) continues the saga with Frank forced into a dangerous delivery.\n\nIt blends romance with high-octane action, showcasing more of Statham’s charisma.\n\nThough less acclaimed, it completed the trilogy.",
+
+ManOnFire: "Man on Fire (2004), directed by Tony Scott, stars Denzel Washington as a bodyguard avenging the kidnapping of a girl in Mexico City.\n\nThe film is both stylish and emotionally powerful, with Washington delivering a career-defining performance.\n\nIt blends gritty violence with themes of redemption.",
+
+InsideMan: "Inside Man (2006), directed by Spike Lee, follows a meticulously planned bank heist led by Clive Owen.\n\nThough more of a crime thriller, it delivers tense standoffs and clever twists.\n\nIt is praised for its intelligence, pacing, and performances by Denzel Washington and Jodie Foster.",
+
+Shooter: "Shooter (2007), starring Mark Wahlberg, follows a sniper framed for an assassination attempt.\n\nIt’s filled with tactical action, conspiracy, and survival elements.\n\nThough formulaic, it gained a following and inspired a TV series adaptation.",
+
+TheEqualizer: "The Equalizer (2014), starring Denzel Washington, follows a retired black-ops agent using his skills to protect the helpless.\n\nIt blends brutal action with themes of justice and morality.\n\nIt became a surprise hit and started a successful franchise.",
+
+TheEqualizer2: "The Equalizer 2 (2018) continues Robert McCall’s vigilante crusade.\n\nIt deepens his character while maintaining intense action sequences.\n\nThough slower-paced, Washington’s performance elevates the film.",
+
+TheEqualizer3: "The Equalizer 3 (2023) sees McCall protecting a town in Italy from the mafia.\n\nIt combines personal closure with violent retribution.\n\nIt was praised as a satisfying end to the trilogy.",
+
+MissionImpossible: "Mission: Impossible (1996), directed by Brian De Palma, introduces Tom Cruise as Ethan Hunt.\n\nThe film is a stylish spy thriller with iconic set pieces like the vault heist.\n\nIt launched one of the most successful action franchises ever.",
+
+MI2: "Mission: Impossible II (2000), directed by John Woo, amps up the spectacle with motorcycle duels and slow-motion gunfights.\n\nThough divisive, it reflects Woo’s unique style.\n\nIt remains memorable for its stunts and operatic tone.",
+
+MI3: "Mission: Impossible III (2006), directed by J.J. Abrams, raises emotional stakes with Ethan’s personal life at risk.\n\nPhilip Seymour Hoffman delivers a chilling villain performance.\n\nThe film reinvigorated the series with heart and intensity.",
+
+GhostProtocol: "Mission: Impossible – Ghost Protocol (2011), directed by Brad Bird, features daring set pieces like Tom Cruise climbing the Burj Khalifa.\n\nIt mixes humor, gadgets, and insane stunts.\n\nIt redefined the franchise and became a global hit.",
+
+RogueNation: "Mission: Impossible – Rogue Nation (2015), directed by Christopher McQuarrie, introduces the Syndicate as a shadowy enemy.\n\nThe film is packed with breathtaking stunts like the plane hang sequence.\n\nIt balanced espionage with action, cementing the series’ consistency.",
+
+Fallout: "Mission: Impossible – Fallout (2018) is considered the best in the franchise.\n\nIt features stunning sequences like the HALO jump and helicopter chase.\n\nIts emotional storytelling and stunts made it a modern action masterpiece.",
+
+TopGun: "Top Gun (1986), directed by Tony Scott, stars Tom Cruise as a Navy pilot in a high-flying competition.\n\nIts mix of aerial stunts, romance, and iconic soundtrack defined '80s cool.\n\nIt became a cultural phenomenon and military recruitment booster.",
+
+TopGunMaverick: "Top Gun: Maverick (2022) brings Tom Cruise back as a mentor to new pilots.\n\nThe film combines nostalgia with jaw-dropping practical flight sequences.\n\nIt was a massive critical and commercial success, hailed as one of the best legacy sequels.",
+
+JohnWick: "John Wick (2014) introduced Keanu Reeves as a retired hitman seeking revenge.\n\nIt revitalized action cinema with its stylish gun-fu choreography.\n\nThe film spawned a beloved franchise and reshaped modern action filmmaking.",
+
+JohnWick2: "John Wick: Chapter 2 (2017) expands the assassin underworld, with John breaking sacred rules.\n\nThe choreography and world-building are even more ambitious.\n\nIt cemented the series as one of the best modern action sagas.",
+
+JohnWick3: "John Wick: Chapter 3 – Parabellum (2019) continues immediately after the second film, with Wick on the run from global assassins.\n\nThe action reaches new heights with horse chases, knife fights, and martial arts battles.\n\nIt is praised for relentless creativity and Reeves’ dedication.",
+
+JohnWick4: "John Wick: Chapter 4 (2023) brings epic scale, global battles, and emotional closure for John’s journey.\n\nThe choreography is breathtaking, mixing samurai duels, shootouts, and car chases.\n\nIt is widely hailed as one of the greatest action films ever made.",
+
+HardBoiled: "Hard Boiled (1992), directed by John Woo, stars Chow Yun-Fat as a cop battling gangsters.\n\nIt features Woo’s signature slow-motion shootouts and balletic violence.\n\nIt is considered one of the greatest action movies from Hong Kong cinema.",
+
+PoliceStory: "Police Story (1985), starring Jackie Chan, blends dangerous stunts with comedy.\n\nChan risked his life performing insane sequences, including a glass-shattering pole slide.\n\nIt redefined martial arts cinema and solidified Chan’s international fame.",
+
+PoliceStory2: "Police Story 2 (1988) continues Jackie Chan’s high-risk stunt work.\n\nIt balances action and humor while expanding the story.\n\nIt remains a strong sequel, showcasing Chan’s relentless creativity.",
+
+RushHour: "Rush Hour (1998), pairing Jackie Chan with Chris Tucker, blends martial arts with comedy.\n\nTheir odd-couple chemistry made the film a global hit.\n\nIt launched a popular trilogy and brought Chan mainstream success in Hollywood.",
+
+RushHour2: "Rush Hour 2 (2001) continues the adventures in Hong Kong, mixing action with comedy banter.\n\nIt expands the humor and exotic locations.\n\nIt was even more successful at the box office than the first film.",
+
+RushHour3: "Rush Hour 3 (2007) reunites Chan and Tucker in Paris for another adventure.\n\nThough less acclaimed, it still delivers laughs and fights.\n\nIt wrapped up the trilogy with star power and fun chemistry.",
+SamsungGalaxyS23Ultra: "The Samsung Galaxy S23 Ultra is Samsung’s 2023 flagship, featuring the Snapdragon 8 Gen 2 processor.\n\nIt comes with a 200MP main camera, dynamic AMOLED 120Hz display, and S-Pen support.\n\nAs a premium device, it redefines productivity and photography standards for Android smartphones.",
+
+iPhone14ProMax: "The iPhone 14 Pro Max launched in 2022 and introduced Apple’s Dynamic Island.\n\nPowered by the A16 Bionic chip, it has a 48MP camera with ProRAW and Cinematic Mode.\n\nIt remains one of the most powerful and polished devices in Apple’s lineup.",
+
+GooglePixel7Pro: "Google Pixel 7 Pro, released in 2022, highlights Google’s Tensor G2 processor.\n\nIt is renowned for its AI-driven photography and clean Android experience.\n\nThis device strengthens Google’s presence as a premium Android contender.",
+
+OnePlus11: "The OnePlus 11 combines flagship performance with competitive pricing.\n\nEquipped with Snapdragon 8 Gen 2, it provides smooth gaming and multitasking.\n\nIts Hasselblad cameras and OxygenOS keep it relevant in the flagship race.",
+
+Xiaomi13Pro: "The Xiaomi 13 Pro is powered by Leica-tuned cameras.\n\nIt has ultra-fast charging and Snapdragon 8 Gen 2 for blazing performance.\n\nIt rivals Samsung and Apple while keeping prices competitive.",
+
+OppoFindX5Pro: "Oppo Find X5 Pro blends futuristic design with premium hardware.\n\nIt boasts Hasselblad-tuned cameras and vibrant AMOLED display.\n\nIt positions Oppo as a major global flagship competitor.",
+
+VivoX90Pro: "The Vivo X90 Pro offers Zeiss co-engineered cameras.\n\nIts imaging system captures excellent low-light shots.\n\nThe phone also packs performance and sleek aesthetics, appealing to photo enthusiasts.",
+
+HuaweiMate50Pro: "Huawei Mate 50 Pro delivers cutting-edge photography despite lacking Google services.\n\nIt comes with variable aperture camera tech, a rarity in smartphones.\n\nHuawei continues to push hardware innovation even with software restrictions.",
+
+RealmeGT2Pro: "The Realme GT2 Pro is Realme’s first true flagship.\n\nIt uses Snapdragon 8 Gen 1 and eco-friendly design materials.\n\nIts affordability makes it a disruptor in the flagship space.",
+
+AsusROGPhone7: "The Asus ROG Phone 7 is built for gamers.\n\nIt has Snapdragon 8 Gen 2, AMOLED 165Hz display, and advanced cooling systems.\n\nThis makes it the ultimate gaming phone in the market.",
+
+SonyXperia1IV: "The Sony Xperia 1 IV is aimed at creators.\n\nIt offers continuous optical zoom and 4K HDR recording.\n\nSony blends professional camera expertise with smartphone versatility.",
+
+NokiaX30: "The Nokia X30 emphasizes sustainability.\n\nIt’s made with recycled materials and offers decent midrange performance.\n\nWhile not a flagship killer, it appeals to eco-conscious consumers.",
+
+MotorolaEdge30Ultra: "The Motorola Edge 30 Ultra features a 200MP camera.\n\nIts near-stock Android makes it lightweight and fast.\n\nMotorola is reviving its flagship relevance with this model.",
+
+HonorMagic5Pro: "The Honor Magic 5 Pro delivers sleek design and powerful cameras.\n\nIts curved display and fast performance highlight Honor’s comeback.\n\nIt competes directly with Samsung and Xiaomi in the premium market.",
+
+PocoF4GT: "The Poco F4 GT is a performance-focused device.\n\nIt includes magnetic shoulder triggers for gaming.\n\nWith affordability, it appeals to young gamers.",
+
+InfinixZeroUltra: "The Infinix Zero Ultra introduces 180W fast charging.\n\nIt’s built to fully charge in under 15 minutes.\n\nThis positions Infinix as a challenger brand in global markets.",
+
+TecnoPhantomX2Pro: "Tecno Phantom X2 Pro includes a retractable portrait lens.\n\nIt’s an innovation rarely seen in its price range.\n\nTecno is stepping into the premium segment with bold design.",
+
+ZTEAxon40Ultra: "ZTE Axon 40 Ultra hides its front camera under the display.\n\nIt offers full-screen immersion without notches or cutouts.\n\nIt represents ZTE’s innovation-driven strategy.",
+
+Meizu20Pro: "The Meizu 20 Pro emphasizes clean design and Flyme OS.\n\nIts hardware is solid with Snapdragon 8 Gen 2.\n\nThough niche, it appeals to loyal Meizu fans in China.",
+
+LenovoLegionY90: "The Lenovo Legion Y90 is a gaming powerhouse.\n\nIt has dual cooling fans and customizable triggers.\n\nIt cements Lenovo’s position in gaming smartphones.",
+
+SharpAquosR7: "The Sharp Aquos R7 is a Japan-exclusive flagship.\n\nIt features a 1-inch camera sensor co-developed with Leica.\n\nIt pushes mobile photography innovation in its region.",
+
+MicromaxInNote2: "Micromax In Note 2 marks India’s local comeback brand.\n\nIt focuses on affordability while maintaining decent performance.\n\nIt targets the budget-conscious Indian consumer market.",
+
+LavaAgni5G: "The Lava Agni 5G is another Indian-made smartphone.\n\nIt delivers 5G connectivity at an affordable price.\n\nThis supports India’s push for local smartphone production.",
+
+NothingPhone1: "The Nothing Phone 1 gained attention for its transparent back.\n\nIt features Glyph Interface lights that give unique notifications.\n\nThis phone stands out with bold design choices in a crowded market.",
+SamsungGalaxyZFold4: "The Galaxy Z Fold 4 is Samsung’s 2022 foldable flagship.\n\nIt refines the foldable experience with a sturdier hinge and multitasking software.\n\nAs a luxury device, it leads the future of foldable smartphones.",
+
+SamsungGalaxyZFlip4: "The Galaxy Z Flip 4 appeals to users who love compact design.\n\nIt folds into a pocket-sized phone while offering flagship specs.\n\nIt brings style and innovation to Samsung’s lineup.",
+
+iPhone13Mini: "The iPhone 13 Mini is Apple’s last compact flagship.\n\nIt offers the same A15 Bionic power in a smaller size.\n\nFans loved its portability, though sales were limited.",
+
+iPhoneSE2022: "The iPhone SE 2022 packs Apple’s A15 Bionic into a budget body.\n\nIt retains the classic iPhone design with Touch ID.\n\nIt’s an affordable entry into the Apple ecosystem.",
+
+GooglePixel6a: "The Pixel 6a is a budget-friendly Google device.\n\nIt retains strong camera performance powered by AI.\n\nThis makes it one of the best midrange phones for photography.",
+
+GooglePixelFold: "The Google Pixel Fold is Google’s first foldable phone.\n\nIt blends Pixel’s camera software with foldable hardware.\n\nIt offers a new form factor for Google’s smartphone ecosystem.",
+
+OnePlusNord2T: "The OnePlus Nord 2T continues the Nord legacy.\n\nIt offers strong performance at a midrange price.\n\nIt appeals to cost-conscious users wanting flagship-like features.",
+
+OnePlusAce2: "The OnePlus Ace 2 focuses on value-for-money performance.\n\nIt uses Snapdragon 8+ Gen 1 and fast charging.\n\nThis model strengthens OnePlus’ presence in Asia.",
+
+XiaomiRedmiNote12Pro: "The Redmi Note 12 Pro is part of Xiaomi’s budget-friendly lineup.\n\nIt includes 5G, solid cameras, and fast charging.\n\nIt’s designed for affordability without compromising too much.",
+
+XiaomiMiMixFold2: "The Mi Mix Fold 2 pushes foldable innovation.\n\nIt is thinner and lighter than competitors, with Leica-tuned cameras.\n\nIt demonstrates Xiaomi’s ambition in premium markets.",
+
+OppoReno9Pro: "The Oppo Reno 9 Pro blends style and performance.\n\nIt has a slim design and reliable hardware for daily use.\n\nThe Reno series continues to shine in mid-premium markets.",
+
+OppoA96: "The Oppo A96 is a budget phone with large battery life.\n\nIt targets young users with design and endurance.\n\nIt ensures Oppo remains strong in the budget sector.",
+
+VivoV25Pro: "The Vivo V25 Pro emphasizes stylish design.\n\nIt has a color-changing back and reliable cameras.\n\nIt appeals to younger audiences who value aesthetics.",
+
+VivoY35: "The Vivo Y35 is a budget model focused on performance per dollar.\n\nIt provides 5G support and large battery.\n\nIt keeps Vivo competitive in the entry-level market.",
+
+HuaweiP50Pocket: "The Huawei P50 Pocket is a foldable clamshell phone.\n\nIt has unique folding design and premium camera quality.\n\nIt highlights Huawei’s innovation despite software limitations.",
+
+HuaweiNova10Pro: "The Nova 10 Pro emphasizes selfies.\n\nIt comes with dual front cameras and sleek design.\n\nIt appeals to younger users who focus on social media.",
+
+RealmeNarzo50: "The Realme Narzo 50 is a gaming-centric budget phone.\n\nIt offers a high refresh rate screen for smooth play.\n\nRealme markets it toward young, entry-level gamers.",
+
+RealmeC55: "The Realme C55 introduces a 'Mini Capsule' notification feature.\n\nIt mimics Apple’s Dynamic Island at an affordable price.\n\nThis innovation keeps Realme relevant in the budget space.",
+
+AsusZenfone9: "The Asus Zenfone 9 is compact yet powerful.\n\nIt includes Snapdragon 8+ Gen 1 and strong cameras.\n\nIt appeals to users who want flagship specs in small size.",
+
+SonyXperia5IV: "The Sony Xperia 5 IV offers professional-grade video features.\n\nIt is a smaller alternative to Xperia 1 IV.\n\nSony maintains its niche for creators and filmmakers.",
+
+MotorolaRazr2022: "The Motorola Razr 2022 modernizes the classic Razr flip phone.\n\nIt has foldable OLED display and improved specs.\n\nIt combines nostalgia with modern technology.",
+
+Honor70: "The Honor 70 is a midrange phone with stylish design.\n\nIt delivers solid cameras and performance.\n\nIt strengthens Honor’s foothold in global midrange markets.",
+
+ZTERedMagic8Pro: "The ZTE Red Magic 8 Pro is a gaming beast.\n\nIt has active cooling fans and Snapdragon 8 Gen 2.\n\nIt appeals strongly to competitive mobile gamers.",
+
+NothingPhone2: "The Nothing Phone 2 improves on the original.\n\nIt refines the Glyph Interface and boosts performance.\n\nNothing continues to innovate in phone design.",
+
+Fairphone5: "The Fairphone 5 continues the sustainable journey.\n\nIt uses fair-trade materials and repairable modules.\n\nIt appeals to users who value ethical production.",
+SamsungGalaxyS23Ultra: "The Samsung Galaxy S23 Ultra is a premium flagship phone released in 2023. It boasts cutting-edge hardware and advanced AI-driven features designed for both productivity and entertainment.\n\nIts design includes a massive 6.8-inch AMOLED display, S-Pen stylus, and a quad-camera system with a 200MP sensor. It is powered by Snapdragon 8 Gen 2 with top-tier battery performance.\n\nThe phone was praised worldwide for its photography and multitasking power, making it a popular choice among professionals and tech enthusiasts." ,
+
+AppleiPhone14ProMax: "The iPhone 14 Pro Max, launched in 2022, represents Apple’s continued innovation in mobile devices. It introduced the new Dynamic Island feature, replacing the traditional notch.\n\nIt comes with a 6.7-inch Super Retina XDR OLED, the powerful A16 Bionic chip, and a triple-camera system with a 48MP main sensor. The build quality remains top-notch with surgical-grade stainless steel.\n\nThis iPhone quickly became one of the best-selling premium devices, solidifying Apple’s dominance in the smartphone market." ,
+
+Xiaomi13Pro: "The Xiaomi 13 Pro was unveiled in late 2022 as a flagship device with strong camera capabilities. It was part of Xiaomi’s push into the premium phone market.\n\nThe phone featured a Leica-branded triple camera, Snapdragon 8 Gen 2 chipset, and a 120Hz LTPO AMOLED display. It supported super-fast 120W charging.\n\nIt was praised for delivering flagship-grade performance at a lower price compared to competitors, making it highly popular in Asia and Europe." ,
+
+OnePlus1: "The OnePlus 11 is a 2023 flagship that marked OnePlus’ return to its performance-focused roots. It offered a near-stock Android experience with OxygenOS.\n\nIt comes with a Snapdragon 8 Gen 2, Hasselblad-tuned cameras, and a 6.7-inch AMOLED with 120Hz refresh rate. Its design combines minimalism with durability.\n\nThe device was praised for its affordability among flagships, making it a strong competitor to Samsung and Apple." ,
+
+GooglePixel7Pro: "The Google Pixel 7 Pro was launched in 2022 as Google’s flagship AI-driven phone. It emphasizes photography and software intelligence.\n\nIt uses Google’s custom Tensor G2 chip, has a 6.7-inch LTPO OLED display, and an advanced triple-camera system with computational photography features. It also integrates exclusive AI tools like real-time translation.\n\nThe Pixel 7 Pro gained praise for its software experience and camera quality, becoming a favorite among photographers and Android enthusiasts." ,
+
+HuaweiP50Pro: "The Huawei P50 Pro launched in 2021 as one of Huawei’s last major global releases before US restrictions limited its market. It emphasized design and photography.\n\nIt features a striking dual-ring camera module, Snapdragon/Kirin chip options, and OLED display with 120Hz refresh. The Leica partnership ensured top-tier photo results.\n\nDespite limited Google services, it gained attention in Asia and Europe for its innovative design and outstanding camera system." ,
+
+OppoFindX5Pro: "The Oppo Find X5 Pro debuted in 2022 as Oppo’s premium flagship with a futuristic design. It continued Oppo’s streak of innovation in imaging.\n\nIt comes with a Snapdragon 8 Gen 1 processor, ceramic back design, and a Hasselblad-branded camera system. It also featured Oppo’s custom MariSilicon X NPU for better imaging.\n\nThe phone gained traction in Asia and Europe, positioning Oppo as a serious contender in the premium smartphone market." ,
+
+VivoX80Pro: "The Vivo X80 Pro launched in 2022, emphasizing mobile photography and video. It cemented Vivo’s status as a leading smartphone maker in Asia.\n\nIt is powered by Snapdragon 8 Gen 1, features a Zeiss-branded quad-camera system, and has a large AMOLED display with 120Hz refresh. Its camera is particularly strong in low-light scenarios.\n\nThe device became a top choice for content creators, further boosting Vivo’s reputation for camera innovation." ,
+
+RealmeGT2Pro: "The Realme GT 2 Pro launched in 2022 as Realme’s first true flagship device. It showcased Realme’s capability to compete with bigger brands.\n\nIt includes a Snapdragon 8 Gen 1 processor, 2K AMOLED display, and eco-friendly materials in its design. It also features a 150-degree ultra-wide camera.\n\nThe phone was praised for delivering premium features at an affordable price, attracting younger consumers worldwide." ,
+
+AsusROGPhone6: "The Asus ROG Phone 6 is a 2022 gaming phone that focuses on performance and immersive experiences for mobile gamers.\n\nIt has a Snapdragon 8+ Gen 1, AMOLED display with 165Hz refresh, and a massive cooling system. It also features shoulder triggers and RGB lighting.\n\nIt quickly became the gold standard for gaming phones, loved by eSports players and mobile gamers globally." ,
+
+SonyXperia1IV: "The Sony Xperia 1 IV was released in 2022 as a premium phone for creators. It emphasized photography and video capabilities.\n\nIt comes with a 4K OLED display, triple-camera system with real optical zoom, and a Snapdragon 8 Gen 1. Its design remains tall and slim with professional-grade tools.\n\nThe phone gained traction among content creators and filmmakers, though its high price limited mainstream adoption." ,
+
+MotorolaEdge30Ultra: "The Motorola Edge 30 Ultra was released in 2022 as Motorola’s flagship comeback. It featured one of the world’s first 200MP cameras.\n\nIt runs on Snapdragon 8+ Gen 1, has a curved AMOLED display, and supports 125W fast charging. Its design is sleek and modern.\n\nThe phone boosted Motorola’s relevance in the global market, especially in Europe and Latin America." ,
+
+NokiaX305G: "The Nokia X30 5G launched in 2022 as a sustainable smartphone under HMD Global. It focused on eco-friendly production and durability.\n\nIt comes with Snapdragon 695, AMOLED display, and dual cameras optimized for low-light performance. The build uses recycled aluminum and plastics.\n\nAlthough not a flagship, it appealed to eco-conscious consumers and helped Nokia regain attention in Europe." ,
+
+InfinixZeroUltra: "The Infinix Zero Ultra launched in 2022 as an affordable flagship challenger. It was aimed at emerging markets like Africa and Southeast Asia.\n\nIt featured a 200MP camera, 120Hz AMOLED display, and 180W fast charging—the fastest in its category. It ran on MediaTek Dimensity chips.\n\nThe phone gained attention for delivering premium features at a fraction of the cost, making Infinix a rising global player." ,
+
+TecnoPhantomX2Pro: "The Tecno Phantom X2 Pro launched in 2022 with an innovative retractable portrait camera. It positioned Tecno as more than just a budget brand.\n\nIt is powered by Dimensity 9000, has a 120Hz AMOLED display, and features strong imaging tools. Its standout feature was the world’s first retractable portrait lens in a smartphone.\n\nThe phone gained recognition in Africa, Asia, and the Middle East for its innovation and value." ,
+
+ZTEAxon40Ultra: "The ZTE Axon 40 Ultra debuted in 2022 with a focus on under-display camera technology. It continued ZTE’s efforts to push futuristic designs.\n\nIt features Snapdragon 8 Gen 1, AMOLED curved display, and an invisible under-display selfie camera. It also has a triple 64MP camera system.\n\nThe phone gained praise for innovation, though it remained a niche choice compared to mainstream brands." ,
+
+HonorMagic4Pro: "The Honor Magic4 Pro launched in 2022 as Honor’s flagship after splitting from Huawei. It focused on premium design and fast charging.\n\nIt runs on Snapdragon 8 Gen 1, has a curved OLED with 120Hz refresh, and a strong quad-camera system. It also featured 100W fast charging.\n\nThe phone signaled Honor’s comeback in the global market, especially in Europe and Asia." ,
+
+LenovoLegionY90: "The Lenovo Legion Y90 is a 2022 gaming smartphone designed for hardcore gamers. It followed Lenovo’s tradition of high-performance gaming devices.\n\nIt has a massive 6.92-inch AMOLED with 144Hz refresh, Snapdragon 8 Gen 1, and dual cooling fans. It also supports gaming triggers.\n\nIt became a niche favorite for mobile gamers, though its large size limited mainstream use." ,
+
+Fairphone4: "The Fairphone 4, launched in 2021, focused on ethical and sustainable smartphone production. It emphasizes repairability and fair trade.\n\nIt features Snapdragon 750G, a dual-camera system, and a 5-year warranty. The design allows easy part replacements.\n\nIt gained attention in Europe as the most ethical smartphone choice, appealing to eco-conscious users." ,
+
+iQOO9Pro: "The iQOO 9 Pro launched in 2022 as a performance-focused phone under Vivo’s sub-brand. It targeted gamers and power users.\n\nIt runs on Snapdragon 8 Gen 1, features a 2K AMOLED display, and has a gimbal-stabilized camera system. Its design was sporty and futuristic.\n\nThe phone gained popularity in India and China, helping iQOO build a strong gaming phone reputation." ,
+
+RedmiNote12Prot: "The Redmi Note 12 Pro+ launched in 2022 as part of Xiaomis famous Note lineup. It delivered flagship-like features in the mid-range category.It comes with a 200MP main camera, Dimensity 1080 chip, and 120W fast charging. Its design remained sleek with a glass finish.The phone was a big hit in India and Southeast Asia, showing Redmis strength in delivering value phones." ,
+
+PocoF4GT: "The Poco F4 GT launched in 2022 as a budget gaming phone. It catered to gamers who wanted high performance at an affordable price.\n\nIt runs on Snapdragon 8 Gen 1, has shoulder triggers, and a 120Hz AMOLED display. It also supports 120W charging.\n\nThe phone became popular in Asia and Europe, establishing Poco as a gamer-friendly brand." ,
+
+Meizu18sPro: "The Meizu 18s Pro launched in 2021 as Meizu’s premium device. It focused on clean design and smooth user experience.\n\nIt had a Snapdragon 888+, AMOLED display, and triple cameras. Meizu’s FlymeOS added customization features.\n\nAlthough limited to China, it gained praise for performance and design." ,
+
+SharpAquosR7: "The Sharp Aquos R7 launched in 2022 with a focus on display and imaging. It continued Sharp’s tradition of innovation in Japan.\n\nIt featured Snapdragon 8 Gen 1, a 1-inch Leica camera sensor, and a Pro IGZO OLED display. Its design emphasized durability and minimalism.\n\nThe phone was highly praised in Japan but remained a niche device globally." ,
+memoryRetention: "Memory retention is the ability to store and recall information over time.\n\nIt depends on brain structures such as the hippocampus and can be improved with practice, sleep, and focus.\n\nStrong memory retention allows humans to learn, adapt, and build knowledge across generations.",
+
+problemSolving: "Problem solving is the cognitive ability to find solutions in complex or uncertain situations.\n\nIt involves creativity, logical reasoning, and critical thinking skills. Humans often combine past experience with new strategies.\n\nThis ability is key to survival, innovation, and everyday decision-making.",
+
+emotionalIntelligence: "Emotional intelligence is the ability to understand and manage one’s emotions as well as others’ feelings.\n\nIt includes empathy, self-regulation, and social skills that shape personal and professional relationships.\n\nHigh emotional intelligence contributes to leadership, teamwork, and conflict resolution.",
+
+physicalStrength: "Physical strength is the ability of muscles to exert force against resistance.\n\nIt develops through exercise, nutrition, and healthy body maintenance. Genetics also plays a role in muscle growth potential.\n\nStrength is essential for survival, work, sports, and overall well-being.",
+
+creativity: "Creativity is the human ability to produce new and original ideas, solutions, or artistic expressions.\n\nIt blends imagination with knowledge to invent, design, or innovate beyond traditional thinking.\n\nCreativity drives culture, technology, and progress in human society.",
+
+criticalThinking: "Critical thinking is the process of analyzing information objectively to make reasoned judgments.\n\nIt requires questioning assumptions, evaluating evidence, and considering multiple perspectives.\n\nThis ability protects against misinformation and improves decision-making.",
+
+adaptability: "Adaptability is the ability to adjust to new conditions and environments.\n\nIt allows humans to survive changes in climate, society, and technology by learning and evolving behaviors.\n\nBeing adaptable ensures resilience in uncertain and challenging times.",
+
+communicationSkills: "Communication skills involve expressing ideas clearly and understanding others.\n\nThey include verbal language, nonverbal cues, and digital interactions.\n\nEffective communication builds trust, resolves conflicts, and strengthens relationships.",
+
+leadership: "Leadership is the ability to guide, inspire, and influence others.\n\nIt combines vision, decision-making, and empathy to direct groups toward common goals.\n\nGreat leaders shape communities, businesses, and historical events.",
+
+empathy: "Empathy is the ability to sense and share the emotions of others.\n\nIt fosters compassion, understanding, and stronger social bonds.\n\nEmpathy reduces conflict and promotes cooperation in human societies.",
+
+selfDiscipline: "Self-discipline is the capacity to control impulses and stay committed to goals.\n\nIt helps humans resist distractions and maintain consistency in habits.\n\nThis ability is critical for success in education, work, and personal development.",
+
+analyticalThinking: "Analytical thinking is the skill of breaking down complex problems into smaller parts.\n\nIt involves logic, pattern recognition, and evaluation of data.\n\nThis ability is crucial in science, engineering, and strategic planning.",
+
+timeManagement: "Time management is the ability to prioritize and use time effectively.\n\nIt requires planning, scheduling, and setting goals.\n\nGood time management increases productivity and reduces stress.",
+
+resilience: "Resilience is the ability to recover quickly from difficulties and stress.\n\nIt involves mental toughness, optimism, and coping strategies.\n\nResilient people thrive despite adversity and inspire others with perseverance.",
+
+focus: "Focus is the mental ability to concentrate on a task without distraction.\n\nIt requires self-control and the ability to filter irrelevant information.\n\nStrong focus improves efficiency, learning, and creative output.",
+
+decisionMaking: "Decision making is the ability to choose between alternatives based on reasoning and values.\n\nIt blends logic, intuition, and experience.\n\nGood decision making leads to positive outcomes in personal and professional life.",
+
+collaboration: "Collaboration is the ability to work effectively with others to achieve shared goals.\n\nIt relies on teamwork, respect, and collective problem-solving.\n\nCollaboration fuels progress in communities, organizations, and global efforts.",
+
+negotiation: "Negotiation is the ability to reach agreements through discussion and compromise.\n\nIt requires persuasion, empathy, and clear communication.\n\nEffective negotiation resolves disputes and builds lasting partnerships.",
+
+selfAwareness: "Self-awareness is the ability to recognize one’s thoughts, emotions, and behaviors.\n\nIt fosters personal growth by highlighting strengths and weaknesses.\n\nSelf-awareness improves emotional intelligence and interpersonal relationships.",
+
+strategicThinking: "Strategic thinking is the ability to plan long-term actions for complex goals.\n\nIt combines foresight, analysis, and creativity.\n\nThis ability is vital for leadership, business, and personal success.",
+
+spatialAwareness: "Spatial awareness is the ability to perceive and understand the position of objects in space.\n\nIt helps humans navigate environments, play sports, and drive safely.\n\nThis ability is essential in professions like architecture, surgery, and aviation.",
+
+patience: "Patience is the ability to endure delays, stress, or hardship without frustration.\n\nIt requires emotional control and perspective.\n\nPatience leads to better decision-making and stronger relationships.",
+
+intuition: "Intuition is the ability to understand or sense something instinctively without conscious reasoning.\n\nIt draws from subconscious experience and emotional cues.\n\nIntuition aids in quick decisions and creative insights.",
+
+curiosity: "Curiosity is the desire to explore, learn, and understand new things.\n\nIt drives humans to ask questions, seek knowledge, and experiment.\n\nCuriosity fuels discovery, innovation, and lifelong learning.",
+
+imagination: "Imagination is the human ability to form mental images and ideas beyond immediate reality.\n\nIt allows humans to create stories, inventions, and visions of the future.\n\nImagination enriches art, science, and culture.",
+learningAbility: "Learning ability is the capacity to acquire new knowledge or skills through study and experience.\n\nIt relies on memory, focus, and adaptability to process information.\n\nA strong learning ability helps humans thrive in changing environments and careers.",
+
+multitasking: "Multitasking is the ability to handle more than one task at the same time.\n\nIt requires cognitive flexibility and efficient attention switching.\n\nAlthough multitasking can reduce efficiency, it remains useful in fast-paced environments.",
+
+creativityUnderPressure: "Creativity under pressure is the ability to generate solutions in stressful situations.\n\nStress activates focus and urgency, pushing people to think differently.\n\nThis skill is crucial in emergency response, leadership, and innovation.",
+
+publicSpeaking: "Public speaking is the ability to communicate ideas effectively to an audience.\n\nIt combines clarity, confidence, and storytelling.\n\nStrong public speaking influences education, politics, and leadership.",
+
+persuasion: "Persuasion is the skill of convincing others to adopt beliefs or take action.\n\nIt involves logic, emotional appeal, and credibility.\n\nPersuasion powers marketing, leadership, and diplomacy.",
+
+handEyeCoordination: "Hand-eye coordination is the ability to synchronize vision with hand movements.\n\nIt depends on motor control and visual processing.\n\nThis ability is essential in sports, surgery, and skilled trades.",
+
+endurance: "Endurance is the capacity to sustain effort and resist fatigue over long periods.\n\nIt develops through training, nutrition, and mental determination.\n\nEndurance is vital in athletics, survival, and demanding work.",
+
+concentration: "Concentration is the ability to direct attention toward a single task for extended periods.\n\nIt involves ignoring distractions and maintaining mental effort.\n\nConcentration improves productivity, learning, and creativity.",
+
+handDexterity: "Hand dexterity is the ability to perform precise and coordinated hand movements.\n\nIt requires fine motor skills, muscle control, and practice.\n\nDexterity supports arts, surgery, writing, and craftsmanship.",
+
+logicalReasoning: "Logical reasoning is the ability to analyze facts and reach rational conclusions.\n\nIt follows structured patterns such as deduction and induction.\n\nThis ability is crucial in mathematics, science, and problem-solving.",
+
+riskAssessment: "Risk assessment is the ability to evaluate potential dangers before making decisions.\n\nIt blends logic, past experiences, and foresight.\n\nThis skill prevents accidents, guides investments, and informs leadership.",
+
+senseOfHumor: "Sense of humor is the ability to perceive and express amusement.\n\nIt involves creativity, timing, and social awareness.\n\nHumor strengthens bonds, reduces stress, and enhances communication.",
+
+willpower: "Willpower is the inner strength to resist temptation and stay focused on goals.\n\nIt functions like a mental muscle that grows with discipline and practice.\n\nStrong willpower supports healthy habits and success.",
+
+teamwork: "Teamwork is the ability to cooperate with others to achieve shared objectives.\n\nIt combines communication, empathy, and coordination.\n\nGood teamwork drives success in sports, workplaces, and communities.",
+
+fastReflexes: "Fast reflexes are the body’s quick, automatic responses to stimuli.\n\nThey rely on the nervous system’s rapid communication between brain and muscles.\n\nReflexes protect from danger and improve athletic performance.",
+
+musicalAbility: "Musical ability is the talent to perceive, create, and perform music.\n\nIt involves rhythm, pitch recognition, and emotional expression.\n\nThis ability enriches culture and provides emotional healing.",
+
+visualThinking: "Visual thinking is the ability to process and communicate information through images and spatial patterns.\n\nIt uses diagrams, maps, and imagination to solve problems.\n\nEngineers, artists, and designers benefit from visual thinking.",
+
+painTolerance: "Pain tolerance is the ability to endure discomfort or injury without breaking focus.\n\nIt depends on physical conditioning, mindset, and genetics.\n\nHigh tolerance aids athletes, soldiers, and patients in recovery.",
+
+selfMotivation: "Self-motivation is the drive to take action without external pressure.\n\nIt relies on personal goals, passion, and discipline.\n\nSelf-motivated people achieve more and inspire others around them.",
+
+innovation: "Innovation is the ability to develop new methods, tools, or ideas that improve life.\n\nIt combines creativity, experimentation, and persistence.\n\nInnovation fuels progress in technology, medicine, and society.",
+
+attentionToDetail: "Attention to detail is the ability to notice and act on small but important elements.\n\nIt requires focus, patience, and precision.\n\nThis ability ensures quality in fields like design, science, and engineering.",
+
+stressManagement: "Stress management is the ability to stay calm and effective under pressure.\n\nIt involves relaxation, planning, and emotional control.\n\nThis ability protects mental health and improves performance.",
+
+charisma: "Charisma is the ability to attract, influence, and inspire others.\n\nIt blends confidence, charm, and communication skills.\n\nCharismatic individuals excel in leadership, entertainment, and social movements.",
+
+senseOfDirection: "Sense of direction is the ability to navigate and orient oneself in environments.\n\nIt relies on memory, spatial awareness, and sometimes instinct.\n\nThis ability is essential in exploration, travel, and survival.",
+
+curiosityDrivenLearning: "Curiosity-driven learning is the natural drive to explore knowledge beyond necessity.\n\nIt turns interest into active study and experimentation.\n\nThis ability expands creativity, innovation, and lifelong growth.",
+idolatry: "Idolatry is the act of placing anything or anyone above God in devotion or worship.\n\nIn scripture, this included worshiping false gods or relying on material possessions instead of the Creator.\n\nThe consequence is separation from God, but repentance restores the relationship.",
+
+pride: "Pride is disobedience through self-exaltation and refusal to humble oneself before God.\n\nIt is seen in biblical figures like Lucifer and King Nebuchadnezzar, who elevated themselves above God's will.\n\nPride leads to downfall, while humility invites God’s favor.",
+
+lying: "Lying is disobedience by speaking falsehoods instead of truth.\n\nIt appears in daily life as deceit, half-truths, or denial of responsibility. In scripture, Ananias and Sapphira lied and faced severe consequences.\n\nGod values honesty, and truth builds trust and righteousness.",
+
+greed: "Greed is disobedience through the uncontrolled desire for wealth, power, or possessions.\n\nIt manifests in exploiting others, hoarding, or failing to be generous. Judas Iscariot’s betrayal of Jesus for silver is a striking example.\n\nGreed blinds hearts to God, but generosity and contentment bring peace.",
+
+rebellion: "Rebellion is open resistance against God’s commands or appointed authorities.\n\nIt appears in Israel’s repeated defiance in the wilderness and in Saul’s disobedience to God’s instructions.\n\nRebellion distances people from God, but obedience leads to blessing and guidance.",
+
+murder: "Murder is the unlawful taking of innocent life, a grave act of disobedience to God.\n\nCain’s killing of Abel demonstrates the destructive power of jealousy and anger.\n\nThis sin corrupts societies, but forgiveness and transformation are possible through repentance.",
+
+theft: "Theft is taking what does not belong to you, breaking God’s commandment.\n\nExamples range from stealing property to withholding wages. In scripture, Achan’s theft brought disaster to Israel.\n\nGod calls for honesty and restitution, promising provision for those who trust Him.",
+
+adultery: "Adultery is unfaithfulness in marriage, betraying both spouse and God.\n\nDavid’s sin with Bathsheba reveals how lust leads to destructive choices.\n\nThe act shatters families and trust, but God offers forgiveness and renewal for the repentant.",
+
+blasphemy: "Blasphemy is showing contempt or disrespect toward God’s name or holiness.\n\nIn scripture, Israel was warned not to misuse God’s name or treat sacred things lightly.\n\nBlasphemy hardens the heart, but reverence brings closeness to God.",
+
+covetousness: "Covetousness is the sin of desiring what belongs to others.\n\nIt manifests in envy, dissatisfaction, and comparison. The tenth commandment warns against it.\n\nCovetousness breeds bitterness, but gratitude and trust in God bring contentment.",
+
+dishonoringParents: "Dishonoring parents is failing to respect and obey the ones God placed in authority.\n\nExamples include neglect, rebellion, or open disrespect. The fifth commandment calls for honor to parents.\n\nDisrespect leads to broken families, while obedience brings blessing and long life.",
+
+falseWitness: "Bearing false witness is lying or twisting the truth against others.\n\nIt may be gossip, slander, or false accusations. In scripture, false witnesses opposed Jesus during His trial.\n\nThis sin damages reputations and communities, but truth brings justice and healing.",
+
+witchcraft: "Witchcraft is seeking power or knowledge through occult means instead of God.\n\nSaul’s visit to the medium of Endor is a biblical warning of this disobedience.\n\nIt opens the door to spiritual bondage, while trusting God brings freedom.",
+
+drunkenness: "Drunkenness is excessive drinking that leads to loss of self-control.\n\nNoah’s shame after drinking shows how it can dishonor even the faithful.\n\nIt destroys health and families, but sobriety and discipline honor God.",
+
+sexualImmorality: "Sexual immorality includes any sexual activity outside God’s design of marriage.\n\nThe Corinthians were warned to flee from immorality, as the body is God’s temple.\n\nThis sin corrupts the spirit, but purity restores intimacy with God.",
+
+envy: "Envy is disobedience through resentment of others’ blessings or success.\n\nJoseph’s brothers sold him due to envy, showing how destructive it can be.\n\nEnvy robs joy, but love and gratitude produce peace.",
+
+hatred: "Hatred is the rejection of God’s command to love others.\n\nCain’s hatred for Abel and the Pharisees’ hatred for Jesus illustrate this sin.\n\nIt breeds violence and division, but love fulfills God’s law.",
+
+laziness: "Laziness is neglecting responsibilities given by God.\n\nThe parable of the talents warns against burying gifts instead of using them.\n\nIdleness wastes opportunities, but diligence leads to fruitfulness.",
+
+ingratitude: "Ingratitude is failing to thank God for His blessings.\n\nIsrael often grumbled despite God’s provision in the wilderness.\n\nA thankless heart distances people from God, but gratitude draws His favor.",
+
+hypocrisy: "Hypocrisy is pretending to be righteous outwardly while hiding sin inwardly.\n\nJesus rebuked the Pharisees for their hypocrisy.\n\nIt deceives others and blinds the soul, but sincerity leads to freedom.",
+positiveAttitude: "A positive attitude is a mindset that focuses on hope, possibilities, and gratitude.\n\nPeople with this attitude face challenges with optimism and encourage others through their words and actions.\n\nIt leads to resilience, stronger relationships, and a more fulfilling life.",
+
+negativeAttitude: "A negative attitude is a mindset centered on doubt, fear, and criticism.\n\nIt often appears as constant complaining or expecting the worst in situations.\n\nThis outlook can drain energy, damage relationships, and hinder personal growth.",
+
+humbleAttitude: "A humble attitude is marked by modesty, respect, and openness to learning.\n\nIt is seen in people who recognize their strengths but also their dependence on others and on God.\n\nHumility builds trust, encourages cooperation, and attracts blessings.",
+
+arrogantAttitude: "An arrogant attitude shows itself in pride, self-importance, and disregard for others.\n\nExamples include boasting or refusing correction, often leading to strained relationships.\n\nArrogance creates division, but humility fosters unity and peace.",
+
+gratefulAttitude: "A grateful attitude recognizes and appreciates blessings, both big and small.\n\nIt is expressed through thankfulness in words, prayers, and actions.\n\nGratitude promotes joy, reduces stress, and strengthens one’s faith and outlook on life.",
+calmAndComposed: "Some people remain calm and composed when bleeding.\n\nThey take deep breaths, assess the wound, and try to manage it logically rather than panicking.\n\nThis attitude often prevents further harm and helps them receive proper treatment quickly.",
+
+panicStricken: "A panic-stricken attitude is when a person becomes overwhelmed by fear or shock at the sight of their own blood.\n\nThey may scream, cry, or even faint, making the situation worse.\n\nThis reaction delays treatment, but support and reassurance from others can help.",
+
+selfReliant: "A self-reliant attitude shows when someone bleeding immediately tries to stop the wound themselves.\n\nThey may apply pressure, look for cloth to cover the wound, or attempt to walk to safety.\n\nWhile this independence can help, it may also risk worsening the injury without proper care.",
+
+denialMindset: "A denial attitude is when someone bleeding refuses to admit they are seriously hurt.\n\nThey may brush it off, continue working, or say 'it’s nothing' despite obvious injury.\n\nThis can lead to infection or greater blood loss, showing the danger of underestimating wounds.",
+
+helpSeeking: "A help-seeking attitude is when the injured person immediately calls for assistance.\n\nThey might shout for family, friends, or emergency services to help control the bleeding.\n\nThis openness to support often results in faster recovery and proper medical care.",
+
+
+
+Fairphone4: "The Fairphone 4 emphasizes repairability and ethics.\n\nIt uses modular components, making self-repair possible.\n\nFairphone appeals to sustainability-focused users globally.",
+
+
+
     washington:
-      "George Washington was the first President of the United States. He led the American colonies to independence. He is often called the Father of his Country.",
+      "George Washington was the first President of the United States.",
   };
 
-  // ✅ Load history when app starts
   useEffect(() => {
     const loadHistory = async () => {
       try {
@@ -1555,40 +2254,27 @@ howToCookCaldereta: "Caldereta is a beef stew with tomato sauce and liver spread
     loadHistory();
   }, []);
 
-  // ✅ Save search to history (with AsyncStorage)
   const saveToHistory = async (q, a) => {
     const newItem = { id: Date.now().toString(), question: q, answer: a };
     const updated = [newItem, ...history];
 
+    // Local storage
     setHistory(updated);
     await AsyncStorage.setItem("searchHistory", JSON.stringify(updated));
-  };
 
-  // Online AI search
-  const askAI = async () => {
-    if (!question.trim()) {
-      setAnswer("⚠️ Please type a question first.");
-      return;
-    }
-
+    // Firestore
     try {
-      const res = await fetch("http://localhost:3000/api/openai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+      await addDoc(collection(db, "searchHistory"), {
+        question: q,
+        answer: a,
+        createdAt: serverTimestamp(),
       });
-
-      const data = await res.json();
-      const reply = data.answer || "⚠️ No response from AI";
-      setAnswer(reply);
-
-      saveToHistory(question, reply); // ✅ Save to history
+      console.log("✅ Saved to Firestore");
     } catch (err) {
-      setAnswer("❌ Error: " + err.message);
+      console.log("❌ Firestore error:", err);
     }
   };
 
-  // Offline search
   const offlineSearch = () => {
     if (!question.trim()) {
       setAnswer("⚠️ Please type a question first.");
@@ -1603,21 +2289,18 @@ howToCookCaldereta: "Caldereta is a beef stew with tomato sauce and liver spread
     if (found) {
       const reply = `📂 Offline Result:\n${offlineData[found]}`;
       setAnswer(reply);
-      saveToHistory(question, reply); // ✅ Save to history
+      saveToHistory(question, reply);
     } else {
-      setAnswer("⚠️ No offline data found for your question.");
+      setAnswer("⚠️ No offline data found.");
     }
   };
 
-  // Input change + suggestions
   const handleInputChange = (text) => {
     setQuestion(text);
-
     if (!text.trim()) {
       setSuggestions([]);
       return;
     }
-
     const filtered = Object.keys(offlineData).filter((key) =>
       key.toLowerCase().includes(text.toLowerCase())
     );
@@ -1629,28 +2312,29 @@ howToCookCaldereta: "Caldereta is a beef stew with tomato sauce and liver spread
     setSuggestions([]);
     const reply = `📂 Offline Result:\n${offlineData[item]}`;
     setAnswer(reply);
-    saveToHistory(item, reply); // ✅ Save to history
+    saveToHistory(item, reply);
   };
 
   return (
     <View style={styles.container}>
-      {/* Home button */}
-      <TouchableOpacity
-        style={styles.homeBtn}
-        onPress={() => router.push("/home")}
-      >
-        <Ionicons name="home-outline" size={22} color="#00eaff" />
-        <Text style={styles.homeBtnText}>Home</Text>
-      </TouchableOpacity>
+      {/* Navigation */}
+      <View style={{ position: "absolute", top: 20, left: 20 }}>
+        <TouchableOpacity
+          style={styles.homeBtn}
+          onPress={() => router.push("/home")}
+        >
+          <Ionicons name="home-outline" size={22} color="#00eaff" />
+          <Text style={styles.homeBtnText}>Home</Text>
+        </TouchableOpacity>
 
-      {/* History button → goes to new history screen */}
-      <TouchableOpacity
-        style={[styles.homeBtn, { top: 65 }]}
-        onPress={() => router.push("/history")}
-      >
-        <Ionicons name="time-outline" size={22} color="#00eaff" />
-        <Text style={styles.homeBtnText}>History</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.homeBtn, { marginTop: 45 }]}
+          onPress={() => router.push("/history")}
+        >
+          <Ionicons name="time-outline" size={22} color="#00eaff" />
+          <Text style={styles.homeBtnText}>History</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Title */}
       <Text style={styles.title}>🤖 SmartAssist</Text>
@@ -1679,54 +2363,36 @@ howToCookCaldereta: "Caldereta is a beef stew with tomato sauce and liver spread
         </View>
       )}
 
-      {/* Ask AI */}
-      <TouchableOpacity style={styles.button} onPress={askAI}>
-        <Text style={styles.buttonText}>🔍 AI Search (Online)</Text>
+      {/* Search button */}
+      <TouchableOpacity style={styles.button} onPress={offlineSearch}>
+        <Text style={styles.buttonText}>🔍 Offline Search</Text>
       </TouchableOpacity>
 
-      {/* Answer */}
+      {/* Answer box */}
       <ScrollView style={styles.answerBox}>
         <Text style={styles.answer}>{answer}</Text>
       </ScrollView>
-
-      {/* Offline Search */}
-      <View style={styles.navButtons}>
-        <TouchableOpacity style={styles.navBtn} onPress={offlineSearch}>
-          <Ionicons name="cloud-offline-outline" size={20} color="#00eaff" />
-          <Text style={styles.navBtnText}>Offline Search</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#0a0f1f" },
-
   homeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    position: "absolute",
-    top: 20,
-    left: 20,
     backgroundColor: "#1f2937",
     padding: 8,
     borderRadius: 20,
+    marginBottom: 5,
   },
-  homeBtnText: {
-    color: "#00eaff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 6,
-  },
-
+  homeBtnText: { color: "#00eaff", marginLeft: 6, fontWeight: "600" },
   title: {
     fontSize: 32,
     fontWeight: "bold",
     marginBottom: 30,
     textAlign: "center",
     color: "#00eaff",
-    letterSpacing: 1,
     marginTop: 50,
   },
   input: {
@@ -1734,14 +2400,12 @@ const styles = StyleSheet.create({
     borderColor: "#00eaff",
     borderRadius: 50,
     padding: 15,
-    paddingHorizontal: 20,
     fontSize: 18,
     backgroundColor: "#111827",
     color: "#fff",
-    marginBottom: 10,
     textAlign: "center",
+    marginBottom: 10,
   },
-
   suggestionBox: {
     backgroundColor: "#1f2937",
     borderRadius: 8,
@@ -1750,12 +2414,10 @@ const styles = StyleSheet.create({
   },
   suggestionItem: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
     borderBottomColor: "#333",
     borderBottomWidth: 1,
   },
   suggestionText: { color: "#00eaff", fontSize: 16 },
-
   button: {
     backgroundColor: "#00eaff",
     padding: 15,
@@ -1764,7 +2426,6 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   buttonText: { color: "#0a0f1f", fontSize: 18, fontWeight: "bold" },
-
   answerBox: {
     flex: 1,
     backgroundColor: "#1f2937",
@@ -1772,24 +2433,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
   },
-  answer: { fontSize: 16, color: "#e5e7eb", lineHeight: 22 },
-
-  navButtons: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 10,
-  },
-  navBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1f2937",
-    padding: 10,
-    borderRadius: 20,
-  },
-  navBtnText: {
-    color: "#00eaff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 6,
-  },
+  answer: { fontSize: 16, color: "#e5e7eb" },
 });
