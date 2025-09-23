@@ -2232,12 +2232,8 @@ denialMindset: "A denial attitude is when someone bleeding refuses to admit they
 
 helpSeeking: "A help-seeking attitude is when the injured person immediately calls for assistance.\n\nThey might shout for family, friends, or emergency services to help control the bleeding.\n\nThis openness to support often results in faster recovery and proper medical care.",
 
-
-
-Fairphone4: "The Fairphone 4 emphasizes repairability and ethics.\n\nIt uses modular components, making self-repair possible.\n\nFairphone appeals to sustainability-focused users globally.",
-
-
-
+    Fairphone4:
+      "The Fairphone 4 emphasizes repairability and ethics.\n\nIt uses modular components, making self-repair possible.\n\nFairphone appeals to sustainability-focused users globally.",
     washington:
       "George Washington was the first President of the United States.",
   };
@@ -2258,11 +2254,9 @@ Fairphone4: "The Fairphone 4 emphasizes repairability and ethics.\n\nIt uses mod
     const newItem = { id: Date.now().toString(), question: q, answer: a };
     const updated = [newItem, ...history];
 
-    // Local storage
     setHistory(updated);
     await AsyncStorage.setItem("searchHistory", JSON.stringify(updated));
 
-    // Firestore
     try {
       await addDoc(collection(db, "searchHistory"), {
         question: q,
@@ -2315,8 +2309,27 @@ Fairphone4: "The Fairphone 4 emphasizes repairability and ethics.\n\nIt uses mod
     saveToHistory(item, reply);
   };
 
+  // 🔹 Logout function
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.clear(); // clear all local storage
+      router.replace("/"); // go back to login (assuming "/" is your login screen)
+      console.log("✅ Logged out successfully");
+    } catch (err) {
+      console.log("❌ Error logging out:", err);
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* 🔹 Logout Button - top right */}
+      <View style={styles.logoutContainer}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={22} color="#fff" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Navigation */}
       <View style={{ position: "absolute", top: 20, left: 20 }}>
         <TouchableOpacity
@@ -2378,6 +2391,23 @@ Fairphone4: "The Fairphone 4 emphasizes repairability and ethics.\n\nIt uses mod
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#0a0f1f" },
+
+  // 🔹 Logout styles
+  logoutContainer: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+  },
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ef4444",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  logoutText: { color: "#fff", marginLeft: 6, fontWeight: "600" },
+
   homeBtn: {
     flexDirection: "row",
     alignItems: "center",
